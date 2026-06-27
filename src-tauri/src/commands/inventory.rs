@@ -3,8 +3,8 @@
 // триггерами. После записи переиндексируем FTS, чтобы поиск был актуален.
 
 use crate::db::Database;
-use crate::events::types::*;
 use crate::events::store;
+use crate::events::types::*;
 use crate::search;
 use crate::sync::hlc::HybridLogicalClock;
 use serde_json::json;
@@ -61,7 +61,11 @@ pub fn update_item(
         crate::db::queries::update_item_card_color(
             &conn,
             &payload.item_id,
-            if color.is_empty() { None } else { Some(color.as_str()) },
+            if color.is_empty() {
+                None
+            } else {
+                Some(color.as_str())
+            },
         )?;
     }
 
@@ -81,7 +85,14 @@ pub fn update_item(
             "production_cost": payload.production_cost,
             "attributes_json": payload.attributes.as_ref().map(|v| v.to_string()),
         });
-        store::append_event(&db, &hlc, &payload.item_id, "item", "ItemUpdated", data.clone())?;
+        store::append_event(
+            &db,
+            &hlc,
+            &payload.item_id,
+            "item",
+            "ItemUpdated",
+            data.clone(),
+        )?;
         {
             let conn = db.conn.lock().map_err(|e| e.to_string())?;
             let _ = search::reindex_item_fts(&conn, &payload.item_id);
@@ -112,7 +123,14 @@ pub fn record_sale(
     payload: RecordSalePayload,
 ) -> Result<(), String> {
     let data = json!({ "quantity": payload.quantity, "sale_price": payload.sale_price });
-    store::append_event(&db, &hlc, &payload.item_id, "item", "SaleRecorded", data.clone())?;
+    store::append_event(
+        &db,
+        &hlc,
+        &payload.item_id,
+        "item",
+        "SaleRecorded",
+        data.clone(),
+    )?;
     let _ = store::append_audit_log(&db, "local", "SaleRecorded", data);
     Ok(())
 }
@@ -124,7 +142,14 @@ pub fn adjust_stock(
     payload: AdjustStockPayload,
 ) -> Result<(), String> {
     let data = json!({ "delta": payload.delta });
-    store::append_event(&db, &hlc, &payload.item_id, "item", "StockAdjusted", data.clone())?;
+    store::append_event(
+        &db,
+        &hlc,
+        &payload.item_id,
+        "item",
+        "StockAdjusted",
+        data.clone(),
+    )?;
     let _ = store::append_audit_log(&db, "local", "StockAdjusted", data);
     Ok(())
 }
@@ -136,7 +161,14 @@ pub fn change_price(
     payload: ChangePricePayload,
 ) -> Result<(), String> {
     let data = json!({ "new_price": payload.new_price });
-    store::append_event(&db, &hlc, &payload.item_id, "item", "PriceChanged", data.clone())?;
+    store::append_event(
+        &db,
+        &hlc,
+        &payload.item_id,
+        "item",
+        "PriceChanged",
+        data.clone(),
+    )?;
     let _ = store::append_audit_log(&db, "local", "PriceChanged", data);
     Ok(())
 }

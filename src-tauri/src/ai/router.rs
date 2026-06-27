@@ -15,7 +15,10 @@ impl AiRouter {
 
     #[allow(dead_code)]
     pub fn provider_names(&self) -> Vec<String> {
-        self.providers.iter().map(|p| p.kind().as_str().to_string()).collect()
+        self.providers
+            .iter()
+            .map(|p| p.kind().as_str().to_string())
+            .collect()
     }
 
     pub async fn answer(&self, req: &AiRequest) -> Result<AiAnswer, AiError> {
@@ -51,7 +54,6 @@ impl AiRouter {
     }
 
     /// Borrow the first provider — used by the Georgian self-review pass.
-    #[allow(dead_code)]
     pub fn first(&self) -> Option<&dyn AiProvider> {
         self.providers.first().map(|b| b.as_ref())
     }

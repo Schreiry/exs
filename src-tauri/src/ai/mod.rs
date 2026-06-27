@@ -22,8 +22,11 @@ use provider::AiProvider;
 use types::{AiProviderKind, ProviderStatus};
 
 /// Real (non-mock) providers in fixed fallback order.
-const REAL_PROVIDERS: [AiProviderKind; 3] =
-    [AiProviderKind::OpenAi, AiProviderKind::Gemini, AiProviderKind::Claude];
+const REAL_PROVIDERS: [AiProviderKind; 3] = [
+    AiProviderKind::OpenAi,
+    AiProviderKind::Gemini,
+    AiProviderKind::Claude,
+];
 
 /// Shared HTTP client with a sane timeout (security: network calls must time out).
 pub(crate) fn http_client() -> reqwest::Client {

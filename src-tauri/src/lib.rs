@@ -50,7 +50,11 @@ fn install_panic_hook() {
             std::backtrace::Backtrace::force_capture(),
         );
         if let Some(path) = panic_log_path() {
-            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+            {
                 use std::io::Write;
                 let _ = f.write_all(body.as_bytes());
             }
@@ -65,7 +69,12 @@ fn show_fatal_dialog(title: &str, body: &str) {
     let title_w: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     let body_w: Vec<u16> = body.encode_utf16().chain(std::iter::once(0)).collect();
     unsafe {
-        MessageBoxW(std::ptr::null_mut(), body_w.as_ptr(), title_w.as_ptr(), MB_OK | MB_ICONERROR);
+        MessageBoxW(
+            std::ptr::null_mut(),
+            body_w.as_ptr(),
+            title_w.as_ptr(),
+            MB_OK | MB_ICONERROR,
+        );
     }
 }
 #[cfg(not(windows))]
@@ -107,6 +116,10 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             log::info!("Exsul starting up (version {})", app.package_info().version);
+
+            // Explicit native-dialog selections for bounded local AI context.
+            // Kept in memory: no path permissions survive an app restart.
+            app.manage(files::local_context::ContextFileAccess::default());
 
             // NEVER returns Err; worst case in-memory DB. Recovery state is
             // persisted into local_config for the frontend banner.
@@ -153,6 +166,11 @@ pub fn run() {
             // ── Search ──
             commands::search::search_products,
             commands::search::rebuild_search_index,
+            // ── Explicit local AI context ──
+            commands::context_files::select_context_files,
+            commands::context_files::read_context_file,
+            commands::context_files::forget_context_file,
+            commands::context_files::clear_context_files,
             // ── AI Gateway ──
             commands::ai::assistant_query,
             commands::ai::analyze_item_image,

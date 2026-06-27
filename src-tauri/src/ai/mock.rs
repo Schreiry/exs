@@ -20,8 +20,14 @@ impl AiProvider for MockProvider {
     async fn answer(&self, req: &AiRequest) -> Result<AiAnswer, AiError> {
         let n = req.context_items.len();
         let text = match req.language.as_str() {
-            "ka" => format!("(mock) მოთხოვნა: «{}». ნაპოვნია {n} შესაბამისი პროდუქტი.", req.query),
-            "ru" => format!("(mock) Запрос: «{}». Найдено {n} подходящих товаров.", req.query),
+            "ka" => format!(
+                "(mock) მოთხოვნა: «{}». ნაპოვნია {n} შესაბამისი პროდუქტი.",
+                req.query
+            ),
+            "ru" => format!(
+                "(mock) Запрос: «{}». Найдено {n} подходящих товаров.",
+                req.query
+            ),
             _ => format!("(mock) Query: \"{}\". {n} relevant products.", req.query),
         };
         Ok(AiAnswer {
@@ -44,10 +50,13 @@ impl AiProvider for MockProvider {
             caption_ru: Some("мок-товар".to_string()),
             caption_en: Some("mock product".to_string()),
             tags: vec!["mock".to_string(), "demo".to_string()],
-            aliases: vec!["პროდუქტი".to_string(), "товар".to_string(), "product".to_string()],
+            aliases: vec![
+                "პროდუქტი".to_string(),
+                "товар".to_string(),
+                "product".to_string(),
+            ],
             visual_attributes: serde_json::json!({"color": "grey", "material": "", "shape": "", "size": ""}),
             confidence: 0.42,
-            ..Default::default()
         })
     }
 }

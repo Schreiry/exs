@@ -69,7 +69,10 @@ pub fn get_items(conn: &Connection, limit: Option<u32>) -> Result<ListPage<Item>
     if truncated {
         items.truncate(cap as usize);
     }
-    Ok(ListPage { rows: items, truncated })
+    Ok(ListPage {
+        rows: items,
+        truncated,
+    })
 }
 
 pub fn get_item_by_id(conn: &Connection, item_id: &str) -> Result<Option<Item>, String> {
@@ -126,8 +129,11 @@ pub fn delete_item(conn: &Connection, item_id: &str) -> Result<(), String> {
 }
 
 pub fn delete_all_items(conn: &Connection) -> Result<usize, String> {
-    let n = conn.execute("DELETE FROM items", []).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM item_search_fts", []).map_err(|e| e.to_string())?;
+    let n = conn
+        .execute("DELETE FROM items", [])
+        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM item_search_fts", [])
+        .map_err(|e| e.to_string())?;
     Ok(n)
 }
 
@@ -150,7 +156,11 @@ pub fn duplicate_item(conn: &Connection, item_id: &str, new_id: &str) -> Result<
 // Events / versioning
 // ============================================================
 
-pub fn get_next_version(conn: &Connection, aggregate_id: &str, node_id: &str) -> Result<i64, String> {
+pub fn get_next_version(
+    conn: &Connection,
+    aggregate_id: &str,
+    node_id: &str,
+) -> Result<i64, String> {
     let result: Option<i64> = conn
         .query_row(
             "SELECT MAX(version) FROM events WHERE aggregate_id = ?1 AND node_id = ?2",
@@ -214,7 +224,11 @@ pub fn get_categories(conn: &Connection) -> Result<Vec<Category>, String> {
     Ok(cats)
 }
 
-pub fn insert_category(conn: &Connection, id: &str, payload: &CreateCategoryPayload) -> Result<(), String> {
+pub fn insert_category(
+    conn: &Connection,
+    id: &str,
+    payload: &CreateCategoryPayload,
+) -> Result<(), String> {
     conn.execute(
         "INSERT INTO categories (id, name, color, icon) VALUES (?1, ?2, ?3, ?4)",
         params![id, payload.name, payload.color, payload.icon],
@@ -293,7 +307,8 @@ pub fn get_ai_metadata(conn: &Connection, item_id: &str) -> Result<Option<AiItem
                 image_caption_ka: row.get(2)?,
                 image_caption_en: row.get(3)?,
                 tags: serde_json::from_str(&tags_json).unwrap_or_default(),
-                visual_attributes: serde_json::from_str(&visual_json).unwrap_or(serde_json::json!({})),
+                visual_attributes: serde_json::from_str(&visual_json)
+                    .unwrap_or(serde_json::json!({})),
                 aliases: serde_json::from_str(&aliases_json).unwrap_or_default(),
                 embedding_model: row.get(7)?,
                 embedding_updated_at: row.get(8)?,
@@ -354,7 +369,8 @@ pub fn get_audit_logs(conn: &Connection, filter: &AuditLogFilter) -> Result<Vec<
     params_vec.push(Box::new(limit));
 
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-    let param_refs: Vec<&dyn rusqlite::types::ToSql> = params_vec.iter().map(|b| b.as_ref()).collect();
+    let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+        params_vec.iter().map(|b| b.as_ref()).collect();
     let rows = stmt
         .query_map(param_refs.as_slice(), |row| {
             let payload_str: String = row.get(3)?;
@@ -376,9 +392,20 @@ pub fn get_audit_logs(conn: &Connection, filter: &AuditLogFilter) -> Result<Vec<
 // Business analytics (ядро аналитики поверх проекции items)
 // ============================================================
 
-pub fn get_inventory_summary(conn: &Connection, low_stock_threshold: i64) -> Result<InventorySummary, String> {
-    let (item_count, total_stock_units, stock_value_at_price, stock_value_at_cost, total_revenue, total_sold, low_stock_count): (i64, i64, f64, f64, f64, i64, i64) =
-        conn.query_row(
+pub fn get_inventory_summary(
+    conn: &Connection,
+    low_stock_threshold: i64,
+) -> Result<InventorySummary, String> {
+    let (
+        item_count,
+        total_stock_units,
+        stock_value_at_price,
+        stock_value_at_cost,
+        total_revenue,
+        total_sold,
+        low_stock_count,
+    ): (i64, i64, f64, f64, f64, i64, i64) = conn
+        .query_row(
             "SELECT
                 COUNT(*),
                 COALESCE(SUM(current_stock), 0),
@@ -389,7 +416,17 @@ pub fn get_inventory_summary(conn: &Connection, low_stock_threshold: i64) -> Res
                 COALESCE(SUM(CASE WHEN current_stock <= ?1 THEN 1 ELSE 0 END), 0)
              FROM items",
             [low_stock_threshold],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                ))
+            },
         )
         .map_err(|e| e.to_string())?;
 
@@ -452,7 +489,10 @@ mod tests {
         let summary = get_inventory_summary(&conn, 2).unwrap();
         assert_eq!(summary.item_count, 2);
         assert_eq!(summary.total_stock_units, 6);
-        assert_eq!(summary.low_stock_count, 1, "only 'b' (stock 1) is <= threshold 2");
+        assert_eq!(
+            summary.low_stock_count, 1,
+            "only 'b' (stock 1) is <= threshold 2"
+        );
         assert!((summary.stock_value_at_price - 70.0).abs() < 1e-6);
     }
 
@@ -476,7 +516,16 @@ mod tests {
     #[test]
     fn category_insert_and_list() {
         let conn = db();
-        insert_category(&conn, "c1", &CreateCategoryPayload { name: "სასმელები".into(), color: None, icon: None }).unwrap();
+        insert_category(
+            &conn,
+            "c1",
+            &CreateCategoryPayload {
+                name: "სასმელები".into(),
+                color: None,
+                icon: None,
+            },
+        )
+        .unwrap();
         let cats = get_categories(&conn).unwrap();
         assert_eq!(cats.len(), 1);
         assert_eq!(cats[0].name, "სასმელები");

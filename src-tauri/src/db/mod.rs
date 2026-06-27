@@ -168,7 +168,11 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
 
 fn write_recovery_log(dir: &Path, msg: &str) {
     let recovery_log = dir.join("recovery.log");
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&recovery_log) {
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&recovery_log)
+    {
         use std::io::Write;
         let _ = writeln!(f, "[{}] {}", chrono::Utc::now().to_rfc3339(), msg);
     }
@@ -209,7 +213,9 @@ pub fn init_with_recovery(handle: &AppHandle) -> RecoveryState {
             let state = if fails == 0 {
                 RecoveryState::Healthy
             } else {
-                RecoveryState::PartialMigrations { failure_count: fails }
+                RecoveryState::PartialMigrations {
+                    failure_count: fails,
+                }
             };
             (c, state, fails)
         }
@@ -229,7 +235,9 @@ pub fn init_with_recovery(handle: &AppHandle) -> RecoveryState {
                             let state = RecoveryState::Recovered {
                                 backup_path: backup.display().to_string(),
                                 reason: first_err.clone(),
-                                full_backup_path: full_backup.as_ref().map(|p| p.display().to_string()),
+                                full_backup_path: full_backup
+                                    .as_ref()
+                                    .map(|p| p.display().to_string()),
                             };
                             (c, state, fails)
                         }
@@ -270,11 +278,16 @@ fn attempt_3_catastrophic(
     match open_and_migrate(db_path) {
         Ok((c, fails)) => (
             c,
-            RecoveryState::CatastrophicFresh { reason: prior_err.to_string() },
+            RecoveryState::CatastrophicFresh {
+                reason: prior_err.to_string(),
+            },
             fails,
         ),
         Err(third_err) => {
-            log::error!("Catastrophic fresh failed too ({}); using in-memory DB", third_err);
+            log::error!(
+                "Catastrophic fresh failed too ({}); using in-memory DB",
+                third_err
+            );
             let conn = Connection::open_in_memory().expect("open_in_memory must succeed");
             let _ = conn.execute_batch("PRAGMA journal_mode = MEMORY; PRAGMA foreign_keys = ON;");
             let fails = migrations::run(&conn).unwrap_or(0);
@@ -291,7 +304,11 @@ fn attempt_3_catastrophic(
 
 fn ensure_node_id(conn: &Connection) {
     let node_id: Option<String> = conn
-        .query_row("SELECT value FROM local_config WHERE key = 'node_id'", [], |row| row.get(0))
+        .query_row(
+            "SELECT value FROM local_config WHERE key = 'node_id'",
+            [],
+            |row| row.get(0),
+        )
         .ok();
 
     if node_id.is_none() {
@@ -327,7 +344,11 @@ mod tests {
 
     #[test]
     fn is_unrecoverable_db_error_recognises_known_markers() {
-        for marker in &["database is malformed", "not a database", "unable to open database file"] {
+        for marker in &[
+            "database is malformed",
+            "not a database",
+            "unable to open database file",
+        ] {
             assert!(is_unrecoverable_db_error(marker));
         }
     }
@@ -346,7 +367,11 @@ mod tests {
         assert_eq!(failures, 0);
         for table in &["events", "items", "ai_item_metadata", "item_search_fts"] {
             let n: i64 = conn
-                .query_row("SELECT COUNT(*) FROM sqlite_master WHERE name=?1", [table], |r| r.get(0))
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE name=?1",
+                    [table],
+                    |r| r.get(0),
+                )
                 .unwrap();
             assert_eq!(n, 1, "table '{}' must exist", table);
         }

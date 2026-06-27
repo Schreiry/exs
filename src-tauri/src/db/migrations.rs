@@ -44,6 +44,15 @@ const MIGRATIONS: &[Migration] = &[
         sql: include_str!("../../migrations/004_search_fts.sql"),
         needs_fk_off: false,
     },
+    Migration {
+        // Deliberately outside the legacy Exsul range (1..32): old user
+        // databases otherwise mistake the new core migrations for migrations
+        // that were already applied by the donor application.
+        version: 1001,
+        name: "legacy_core_bridge",
+        sql: include_str!("../../migrations/1001_legacy_core_bridge.sql"),
+        needs_fk_off: false,
+    },
 ];
 
 /// Apply a single migration. First pass: whole file in one transaction
@@ -134,7 +143,11 @@ fn smart_split(sql: &str) -> Vec<String> {
     let mut i = 0;
     while i < bytes.len() {
         let c = bytes[i] as char;
-        let next = if i + 1 < bytes.len() { bytes[i + 1] as char } else { '\0' };
+        let next = if i + 1 < bytes.len() {
+            bytes[i + 1] as char
+        } else {
+            '\0'
+        };
 
         if in_line_comment {
             buf.push(c);
@@ -227,7 +240,11 @@ fn matches_keyword_at(bytes: &[u8], pos: usize, kw: &[u8]) -> bool {
         return false;
     }
     let slice = &bytes[pos..pos + kw.len()];
-    if !slice.iter().zip(kw.iter()).all(|(b, k)| b.to_ascii_uppercase() == *k) {
+    if !slice
+        .iter()
+        .zip(kw.iter())
+        .all(|(b, k)| b.to_ascii_uppercase() == *k)
+    {
         return false;
     }
     let before_ok = pos == 0 || {
@@ -276,10 +293,16 @@ pub fn run(conn: &Connection) -> Result<usize, Box<dyn std::error::Error>> {
             continue;
         }
 
-        log::info!("Applying migration {}: {}", migration.version, migration.name);
+        log::info!(
+            "Applying migration {}: {}",
+            migration.version,
+            migration.name
+        );
 
         let prior_fk: bool = if migration.needs_fk_off {
-            let prior: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap_or(0);
+            let prior: i64 = conn
+                .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
+                .unwrap_or(0);
             let _ = conn.execute_batch("PRAGMA foreign_keys = OFF;");
             prior != 0
         } else {
@@ -385,6 +408,86 @@ mod tests {
     }
 
     #[test]
+    fn bridges_legacy_items_without_losing_rows() {
+        let conn = fresh_conn();
+        conn.execute_batch(
+            "CREATE TABLE schema_migrations (
+                version INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT ''
+            );
+            INSERT INTO schema_migrations(version, name) VALUES
+                (1, 'initial_schema'),
+                (2, 'projection_triggers'),
+                (3, 'extensions'),
+                (4, 'preset_and_flowers');
+
+            CREATE TABLE events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aggregate_id TEXT NOT NULL,
+                aggregate_type TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                data TEXT NOT NULL DEFAULT '{}',
+                hlc_timestamp TEXT NOT NULL,
+                node_id TEXT NOT NULL,
+                version INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT ''
+            );
+            CREATE TABLE items (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT 'uncategorized',
+                initial_price REAL NOT NULL DEFAULT 0.0,
+                current_price REAL NOT NULL DEFAULT 0.0,
+                production_cost REAL NOT NULL DEFAULT 0.0,
+                current_stock INTEGER NOT NULL DEFAULT 0,
+                sold_count INTEGER NOT NULL DEFAULT 0,
+                revenue REAL NOT NULL DEFAULT 0.0,
+                created_at TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT '',
+                category_id TEXT,
+                image_path TEXT,
+                card_color TEXT
+            );
+            CREATE TABLE item_prices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+                price REAL NOT NULL,
+                effective_at TEXT NOT NULL,
+                event_id INTEGER NOT NULL REFERENCES events(id),
+                created_at TEXT NOT NULL DEFAULT ''
+            );
+            INSERT INTO items (
+                id, name, category, current_price, current_stock, created_at, updated_at
+            ) VALUES ('legacy-1', 'Legacy tea', 'drinks', 12.5, 3, 'old', 'old');",
+        )
+        .unwrap();
+
+        let failures = run(&conn).expect("legacy bridge must run");
+        assert_eq!(failures, 0);
+
+        let (name, description, attributes): (String, String, String) = conn
+            .query_row(
+                "SELECT name, description, attributes_json FROM items WHERE id='legacy-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(name, "Legacy tea");
+        assert_eq!(description, "");
+        assert_eq!(attributes, "{}");
+
+        let indexed: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM item_search_fts WHERE item_search_fts MATCH 'Legacy'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(indexed, 1);
+    }
+
+    #[test]
     fn item_created_event_projects_into_items() {
         // The projection trigger (migration 002) must materialize an item row.
         let conn = fresh_conn();
@@ -398,9 +501,11 @@ mod tests {
         .unwrap();
 
         let (name, price): (String, f64) = conn
-            .query_row("SELECT name, current_price FROM items WHERE id='i1'", [], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT name, current_price FROM items WHERE id='i1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .unwrap();
         assert_eq!(name, "ჩაი");
         assert_eq!(price, 12.5);

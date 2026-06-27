@@ -48,6 +48,17 @@ pub struct ProductContext {
     pub tags: Vec<String>,
 }
 
+/// Explicitly selected local text supplied as untrusted reference material.
+/// Content is bounded before it reaches a provider and must never be treated
+/// as system instructions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileContext {
+    pub name: String,
+    pub content: String,
+    #[serde(default)]
+    pub truncated: bool,
+}
+
 /// One image to analyze, base64-encoded (no data: prefix).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageInput {
@@ -63,6 +74,8 @@ pub struct AiRequest {
     pub language: String,
     #[serde(default)]
     pub context_items: Vec<ProductContext>,
+    #[serde(default)]
+    pub context_files: Vec<FileContext>,
 }
 
 /// A text answer from a provider.
