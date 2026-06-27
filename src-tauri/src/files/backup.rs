@@ -46,7 +46,8 @@ pub fn create_backup(handle: &AppHandle) -> Result<PathBuf, String> {
     let mut zip = zip::ZipWriter::new(file);
     let opts = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
-    zip.start_file("exsul.db", opts).map_err(|e| e.to_string())?;
+    zip.start_file("exsul.db", opts)
+        .map_err(|e| e.to_string())?;
     let mut db_bytes = Vec::new();
     File::open(&tmp_db)
         .and_then(|mut f| f.read_to_end(&mut db_bytes))
@@ -110,8 +111,12 @@ pub fn restore_backup(handle: &AppHandle, zip_path: PathBuf) -> Result<RestoreRe
     {
         let db = handle.state::<crate::db::Database>();
         let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
-        conn.restore(DatabaseName::Main, &src_db, None::<fn(rusqlite::backup::Progress)>)
-            .map_err(|e| format!("restore failed: {e}"))?;
+        conn.restore(
+            DatabaseName::Main,
+            &src_db,
+            None::<fn(rusqlite::backup::Progress)>,
+        )
+        .map_err(|e| format!("restore failed: {e}"))?;
     }
 
     // Copy images back.
@@ -133,7 +138,8 @@ pub fn restore_backup(handle: &AppHandle, zip_path: PathBuf) -> Result<RestoreRe
     let items_restored: i64 = {
         let db = handle.state::<crate::db::Database>();
         let conn = db.conn.lock().map_err(|e| e.to_string())?;
-        conn.query_row("SELECT COUNT(*) FROM items", [], |r| r.get(0)).unwrap_or(0)
+        conn.query_row("SELECT COUNT(*) FROM items", [], |r| r.get(0))
+            .unwrap_or(0)
     };
 
     let _ = std::fs::remove_dir_all(&tmp_dir);

@@ -81,14 +81,24 @@ triggers.
 
 ## Commands to run
 
+**Canonical (fail-fast, strict):**
+```
+build.bat   # FULL: npm check -> cargo fmt --check -> cargo check -> clippy -D warnings -> cargo test -> tauri build (release)
+check.bat   # VERIFY only (no release bundle) — same strict checks, fast; run this often during dev
+```
+Both stop on the first failing stage with a non-zero exit and print which stage
+failed — nothing gets through. Set `EXSUL_NOPAUSE=1` to skip the final `pause`
+(CI / non-interactive). `scripts\build-release.bat` delegates to `build.bat`.
+
+**Granular:**
 ```
 scripts\dev.bat            # Tauri + Vite dev (hot reload)
-scripts\build-release.bat  # production NSIS installer
 scripts\run.bat            # launch built binary
 npm run check              # svelte-check + tsc (strict)
 npm run build              # build frontend to build/
-cd src-tauri && cargo check   # type-check Rust
-cd src-tauri && cargo test    # unit tests (migrations, queries, search, prompts)
+cd src-tauri && cargo check    # type-check Rust
+cd src-tauri && cargo clippy --all-targets -- -D warnings
+cd src-tauri && cargo test     # unit tests (migrations, queries, search, prompts)
 ```
 
 `generate_context!` requires `build/` to exist — run `npm run build` before

@@ -47,7 +47,9 @@ pub fn load_key(kind: AiProviderKind) -> Option<String> {
             }
         }
     }
-    std::env::var(env_var(kind)).ok().filter(|s| !s.trim().is_empty())
+    std::env::var(env_var(kind))
+        .ok()
+        .filter(|s| !s.trim().is_empty())
 }
 
 /// Whether a key is available (keyring or env), without returning it.

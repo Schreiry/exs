@@ -15,7 +15,10 @@ impl AiRouter {
 
     #[allow(dead_code)]
     pub fn provider_names(&self) -> Vec<String> {
-        self.providers.iter().map(|p| p.kind().as_str().to_string()).collect()
+        self.providers
+            .iter()
+            .map(|p| p.kind().as_str().to_string())
+            .collect()
     }
 
     pub async fn answer(&self, req: &AiRequest) -> Result<AiAnswer, AiError> {

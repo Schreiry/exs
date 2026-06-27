@@ -38,7 +38,10 @@ impl OpenAiProvider {
             .map_err(|e| AiError::Network(e.to_string()))?;
 
         let status = resp.status();
-        let text = resp.text().await.map_err(|e| AiError::Network(e.to_string()))?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| AiError::Network(e.to_string()))?;
         if !status.is_success() {
             // Не логируем тело с возможными деталями ключа — только статус.
             log::warn!("OpenAI returned HTTP {}", status);

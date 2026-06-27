@@ -36,7 +36,10 @@ impl GeminiProvider {
             .map_err(|e| AiError::Network(e.to_string()))?;
 
         let status = resp.status();
-        let text = resp.text().await.map_err(|e| AiError::Network(e.to_string()))?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| AiError::Network(e.to_string()))?;
         if !status.is_success() {
             log::warn!("Gemini returned HTTP {}", status);
             return Err(AiError::Provider(format!("HTTP {status}")));
@@ -46,7 +49,9 @@ impl GeminiProvider {
         v["candidates"][0]["content"]["parts"][0]["text"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| AiError::Parse("missing candidates[0].content.parts[0].text".to_string()))
+            .ok_or_else(|| {
+                AiError::Parse("missing candidates[0].content.parts[0].text".to_string())
+            })
     }
 }
 

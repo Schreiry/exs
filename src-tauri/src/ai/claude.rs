@@ -41,7 +41,10 @@ impl ClaudeProvider {
             .map_err(|e| AiError::Network(e.to_string()))?;
 
         let status = resp.status();
-        let text = resp.text().await.map_err(|e| AiError::Network(e.to_string()))?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| AiError::Network(e.to_string()))?;
         if !status.is_success() {
             log::warn!("Claude returned HTTP {}", status);
             return Err(AiError::Provider(format!("HTTP {status}")));
