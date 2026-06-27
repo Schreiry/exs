@@ -4,6 +4,8 @@
 	import VoidBackground from '$lib/components/VoidBackground.svelte';
 	import ContextInput from '$lib/components/ContextInput.svelte';
 	import ResultScene from '$lib/components/ResultScene.svelte';
+	import AnalyticsScene from '$lib/components/AnalyticsScene.svelte';
+	import SalesHeatmap from '$lib/components/SalesHeatmap.svelte';
 	import { scene } from '$lib/scene/scene.svelte';
 	import { t } from '$lib/i18n';
 	import { isTauri, seedDemoItems, aiGetStatus } from '$lib/tauri/commands';
@@ -63,6 +65,12 @@
 	{#if scene.mode === 'results' && scene.response}
 		<div class="results-wrap">
 			<ResultScene response={scene.response} />
+		</div>
+	{/if}
+
+	{#if scene.mode === 'analytics'}
+		<div class="results-wrap">
+			<AnalyticsScene />
 		</div>
 	{/if}
 

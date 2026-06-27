@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod analytics;
 pub mod audit;
 pub mod backup;
 pub mod categories;

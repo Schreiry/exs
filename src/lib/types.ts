@@ -114,6 +114,93 @@ export interface RestoreReport {
 	message: string;
 }
 
+// ── Analytics (mirror of events::types extended analytics) ──────────
+
+export interface TopSeller {
+	id: string;
+	name: string;
+	category: string;
+	sold_count: number;
+	revenue: number;
+	current_price: number;
+	current_stock: number;
+}
+
+export interface DeadStock {
+	id: string;
+	name: string;
+	category: string;
+	current_stock: number;
+	current_price: number;
+	locked_value: number;
+}
+
+export interface LowStockItem {
+	id: string;
+	name: string;
+	category: string;
+	current_stock: number;
+	current_price: number;
+}
+
+export interface CategoryBreakdown {
+	category: string;
+	item_count: number;
+	stock_units: number;
+	stock_value: number;
+	revenue: number;
+	sold_count: number;
+}
+
+export type SalesBucket = 'day' | 'week' | 'month';
+
+export interface TimeseriesPoint {
+	bucket: string;
+	sales_count: number;
+	units_sold: number;
+	revenue: number;
+}
+
+export interface AiCoverage {
+	total_items: number;
+	with_caption_ka: number;
+	with_tags: number;
+	with_aliases: number;
+	latest_ai_update: string | null;
+}
+
+export interface ActivityEntry {
+	event_type: string;
+	item_id: string;
+	item_name: string;
+	summary: string;
+	hlc_timestamp: string;
+	created_at: string | null;
+}
+
+export interface StockOutForecast {
+	id: string;
+	name: string;
+	category: string;
+	current_stock: number;
+	sold_count: number;
+	velocity_per_day: number;
+	days_until_stockout: number;
+	first_sale_at: string | null;
+	history_days: number;
+}
+
+export interface HeatmapCell {
+	/** 0 = Sunday … 6 = Saturday */
+	weekday: number;
+	/** 0..23 */
+	hour: number;
+	revenue: number;
+	units: number;
+}
+
+export type HeatmapPeriodDays = 7 | 30 | 90 | 0; // 0 = all time
+
 export interface CreateItemPayload {
 	name: string;
 	description?: string;

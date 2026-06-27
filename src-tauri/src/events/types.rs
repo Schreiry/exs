@@ -197,3 +197,108 @@ pub struct InventorySummary {
     pub low_stock_count: i64,
     pub top_categories: Vec<CategoryCount>,
 }
+
+// ── Extended analytics ─────────────────────────────────────────────
+// All read-only views over the `items` projection + `events` ledger +
+// `ai_item_metadata`. Used by `commands::analytics`.
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TopSeller {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub sold_count: i64,
+    pub revenue: f64,
+    pub current_price: f64,
+    pub current_stock: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DeadStock {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub current_stock: i64,
+    pub current_price: f64,
+    /// current_stock * current_price — capital tied up.
+    pub locked_value: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LowStockItem {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub current_stock: i64,
+    pub current_price: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CategoryBreakdown {
+    pub category: String,
+    pub item_count: i64,
+    pub stock_units: i64,
+    pub stock_value: f64,
+    pub revenue: f64,
+    pub sold_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TimeseriesPoint {
+    /// Bucket label, e.g. "2026-06-27", "2026-W26", "2026-06".
+    pub bucket: String,
+    pub sales_count: i64,
+    pub units_sold: i64,
+    pub revenue: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AiCoverage {
+    pub total_items: i64,
+    pub with_caption_ka: i64,
+    pub with_tags: i64,
+    pub with_aliases: i64,
+    pub latest_ai_update: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ActivityEntry {
+    pub event_type: String,
+    pub item_id: String,
+    pub item_name: String,
+    /// Human-readable single-line summary (e.g. "გაყიდა 2 ცალი", "+10 მარაგი").
+    pub summary: String,
+    pub hlc_timestamp: String,
+    pub created_at: Option<String>,
+}
+
+/// Stock-out forecast: predicts how many days of stock remain at the current
+/// sales velocity. Items without enough sales history are excluded.
+#[derive(Debug, Clone, Serialize)]
+pub struct StockOutForecast {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub current_stock: i64,
+    pub sold_count: i64,
+    /// Units sold per day, computed since the first SaleRecorded event.
+    pub velocity_per_day: f64,
+    /// Estimated days until `current_stock` reaches 0.
+    pub days_until_stockout: f64,
+    /// ISO timestamp of the first SaleRecorded event for this item (None if none).
+    pub first_sale_at: Option<String>,
+    /// Number of days of sales history (max(first_sale_at, today) - first_sale_at).
+    pub history_days: f64,
+}
+
+/// One cell of the sales heatmap (weekday × hour). Only non-zero cells are
+/// emitted; the frontend zero-fills the grid.
+#[derive(Debug, Clone, Serialize)]
+pub struct HeatmapCell {
+    /// 0 = Sunday … 6 = Saturday (matches SQLite strftime('%w')).
+    pub weekday: u8,
+    /// 0..23 (matches SQLite strftime('%H')).
+    pub hour: u8,
+    pub revenue: f64,
+    pub units: i64,
+}

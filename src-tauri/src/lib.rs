@@ -150,6 +150,16 @@ pub fn run() {
             commands::inventory::duplicate_item,
             commands::inventory::get_inventory_summary,
             commands::inventory::seed_demo_items,
+            // ── Analytics ──
+            commands::analytics::get_top_sellers,
+            commands::analytics::get_dead_stock,
+            commands::analytics::get_low_stock_items,
+            commands::analytics::get_category_breakdown,
+            commands::analytics::get_sales_timeseries,
+            commands::analytics::get_ai_coverage,
+            commands::analytics::get_recent_activity,
+            commands::analytics::get_stock_out_forecast,
+            commands::analytics::get_sales_heatmap,
             // ── Search ──
             commands::search::search_products,
             commands::search::rebuild_search_index,
