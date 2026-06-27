@@ -2,6 +2,9 @@
 // NB: задание упоминает Responses API как primary — Chat Completions выбран для
 // надёжности и предсказуемой формы ответа; переезд на /v1/responses — next step
 // (эндпоинт/тело инкапсулированы здесь).
+// Model: gpt-5-mini (cheapest GPT-5.x vision-capable tier as of writing; OpenAI
+// aliases shift frequently — override per install via the OPENAI_MODEL env var
+// rather than editing this constant).
 
 use crate::ai::provider::AiProvider;
 use crate::ai::types::{AiAnswer, AiError, AiProviderKind, AiRequest, ImageInput, VisionMetadata};
@@ -10,7 +13,8 @@ use async_trait::async_trait;
 use serde_json::json;
 
 const ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
-const DEFAULT_MODEL: &str = "gpt-4o-mini";
+const DEFAULT_MODEL: &str = "gpt-5-mini";
+const MODEL_ENV: &str = "OPENAI_MODEL";
 
 pub struct OpenAiProvider {
     api_key: String,
@@ -22,7 +26,13 @@ impl OpenAiProvider {
     pub fn new(api_key: String, model: Option<String>) -> Self {
         Self {
             api_key,
-            model: model.unwrap_or_else(|| DEFAULT_MODEL.to_string()),
+            model: model
+                .or_else(|| {
+                    std::env::var(MODEL_ENV)
+                        .ok()
+                        .filter(|s| !s.trim().is_empty())
+                })
+                .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
             client: super::http_client(),
         }
     }
