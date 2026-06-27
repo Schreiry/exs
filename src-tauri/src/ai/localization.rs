@@ -17,6 +17,7 @@ pub async fn georgian_review(provider: &dyn AiProvider, text: &str) -> String {
         query: prompts::georgian_review_instruction(text),
         language: "ka".to_string(),
         context_items: Vec::new(),
+        context_files: Vec::new(),
     };
     match provider.answer(&req).await {
         Ok(ans) if !ans.text.trim().is_empty() => ans.text,

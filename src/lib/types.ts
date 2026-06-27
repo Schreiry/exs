@@ -129,3 +129,61 @@ export interface CreateItemPayload {
 	initial_stock?: number;
 	attributes?: unknown;
 }
+
+// ── Explicit local AI context ──────────────────────────────────
+
+export type ContextFileKind =
+	| 'plain_text'
+	| 'markdown'
+	| 'delimited_data'
+	| 'json'
+	| 'yaml'
+	| 'toml'
+	| 'xml'
+	| 'html'
+	| 'configuration'
+	| 'sql'
+	| 'source_code';
+
+export type ContextFileErrorCode =
+	| 'dialog_failed'
+	| 'unsupported_path'
+	| 'unsupported_type'
+	| 'not_a_file'
+	| 'file_too_large'
+	| 'file_unavailable'
+	| 'invalid_encoding'
+	| 'binary_content'
+	| 'not_selected'
+	| 'selection_limit'
+	| 'registry_full'
+	| 'internal';
+
+export interface ContextFileIssue {
+	code: ContextFileErrorCode;
+	message: string;
+	file_name: string;
+}
+
+export interface ContextFileMetadata {
+	/** Opaque, session-only capability. This is intentionally not a path. */
+	selection_id: string;
+	file_name: string;
+	extension: string;
+	kind: ContextFileKind;
+	size_bytes: number;
+	modified_at: string | null;
+}
+
+export interface ContextFileSelection {
+	cancelled: boolean;
+	files: ContextFileMetadata[];
+	rejected: ContextFileIssue[];
+	max_file_bytes: number;
+}
+
+export interface ContextFileDocument {
+	file: ContextFileMetadata;
+	content: string;
+	content_sha256: string;
+}

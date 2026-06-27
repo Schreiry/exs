@@ -8,6 +8,13 @@ import type { AssistantResponse, ProductSearchResult } from '$lib/types';
 
 export type SceneMode = 'idle' | 'searching' | 'results' | 'error';
 
+export interface SceneTurn {
+	id: string;
+	query: string;
+	response: AssistantResponse;
+	createdAt: number;
+}
+
 function detectLang(text: string): 'ru' | 'ka' | 'en' {
 	let ka = 0;
 	let ru = 0;
@@ -29,22 +36,34 @@ class SceneState {
 	response = $state<AssistantResponse | null>(null);
 	error = $state<string | null>(null);
 	history = $state<string[]>([]);
+	turns = $state<SceneTurn[]>([]);
 
 	get results(): ProductSearchResult[] {
 		return this.response?.search.results ?? [];
 	}
 
-	async submit(raw: string) {
+	async submit(raw: string, contextFileIds: readonly string[] = []) {
 		const query = raw.trim();
 		if (!query || this.mode === 'searching') return;
 		this.query = query;
 		this.mode = 'searching';
 		this.error = null;
 		try {
-			const resp = isTauri() ? await assistantQuery(query) : mockAssistant(query);
+			const resp = isTauri()
+				? await assistantQuery(query, undefined, [...contextFileIds])
+				: mockAssistant(query);
 			this.response = resp;
 			this.mode = 'results';
 			this.history = [query, ...this.history.filter((h) => h !== query)].slice(0, 12);
+			this.turns = [
+				...this.turns,
+				{
+					id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+					query,
+					response: resp,
+					createdAt: Date.now()
+				}
+			].slice(-12);
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 			this.mode = 'error';
@@ -56,6 +75,12 @@ class SceneState {
 		this.response = null;
 		this.error = null;
 		this.query = '';
+	}
+
+	clearHistory() {
+		this.turns = [];
+		this.history = [];
+		this.reset();
 	}
 }
 

@@ -81,3 +81,60 @@ export const ItemImageSchema = z.object({
 	mime: z.string(),
 	base64: z.string()
 });
+
+export const ContextFileKindSchema = z.enum([
+	'plain_text',
+	'markdown',
+	'delimited_data',
+	'json',
+	'yaml',
+	'toml',
+	'xml',
+	'html',
+	'configuration',
+	'sql',
+	'source_code'
+]);
+
+export const ContextFileErrorCodeSchema = z.enum([
+	'dialog_failed',
+	'unsupported_path',
+	'unsupported_type',
+	'not_a_file',
+	'file_too_large',
+	'file_unavailable',
+	'invalid_encoding',
+	'binary_content',
+	'not_selected',
+	'selection_limit',
+	'registry_full',
+	'internal'
+]);
+
+export const ContextFileMetadataSchema = z.object({
+	selection_id: z.string().uuid(),
+	file_name: z.string(),
+	extension: z.string(),
+	kind: ContextFileKindSchema,
+	size_bytes: z.number().int().nonnegative(),
+	modified_at: z.string().datetime({ offset: true }).nullable()
+});
+
+export const ContextFileSelectionSchema = z.object({
+	cancelled: z.boolean(),
+	files: z.array(ContextFileMetadataSchema),
+	rejected: z.array(
+		z.object({
+			code: ContextFileErrorCodeSchema,
+			message: z.string(),
+			file_name: z.string()
+		})
+	),
+	max_file_bytes: z.number().int().positive()
+});
+
+export const ContextFileDocumentSchema = z.object({
+	file: ContextFileMetadataSchema,
+	content: z.string(),
+	content_sha256: z.string().regex(/^[a-f0-9]{64}$/)
+});

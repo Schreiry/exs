@@ -3,6 +3,7 @@
 // без шифрования/Drive. Backup = zip(БД + images) через online-backup API.
 
 pub mod backup;
+pub mod local_context;
 
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};

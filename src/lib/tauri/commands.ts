@@ -7,7 +7,9 @@ import {
 	ProductSearchResponseSchema,
 	AiStatusSchema,
 	InventorySummarySchema,
-	ItemImageSchema
+ItemImageSchema,
+	ContextFileSelectionSchema,
+	ContextFileDocumentSchema
 } from '$lib/schemas';
 import type {
 	AssistantResponse,
@@ -19,7 +21,9 @@ import type {
 	ItemImage,
 	ListPage,
 	CreateItemPayload,
-	RestoreReport
+	RestoreReport,
+	ContextFileSelection,
+	ContextFileDocument
 } from '$lib/types';
 
 /** Detect whether we're running inside the Tauri webview (vs plain browser dev). */
@@ -31,9 +35,10 @@ export function isTauri(): boolean {
 
 export async function assistantQuery(
 	query: string,
-	language?: 'ru' | 'ka' | 'en'
+	language?: 'ru' | 'ka' | 'en',
+	contextFileIds?: string[]
 ): Promise<AssistantResponse> {
-	const raw = await invoke('assistant_query', { query, language });
+	const raw = await invoke('assistant_query', { query, language, contextFileIds });
 	return AssistantResponseSchema.parse(raw) as AssistantResponse;
 }
 
@@ -97,6 +102,27 @@ export async function getInventorySummary(lowStockThreshold?: number): Promise<I
 
 export async function rebuildSearchIndex(): Promise<number> {
 	return (await invoke('rebuild_search_index')) as number;
+}
+
+// ── Explicit local AI context ───────────────────────────────────
+
+/** Opens the native picker and returns opaque session IDs, never filesystem paths. */
+export async function selectContextFiles(): Promise<ContextFileSelection> {
+	const raw = await invoke('select_context_files');
+	return ContextFileSelectionSchema.parse(raw) as ContextFileSelection;
+}
+
+export async function readContextFile(selectionId: string): Promise<ContextFileDocument> {
+	const raw = await invoke('read_context_file', { selectionId });
+	return ContextFileDocumentSchema.parse(raw) as ContextFileDocument;
+}
+
+export async function forgetContextFile(selectionId: string): Promise<boolean> {
+	return (await invoke('forget_context_file', { selectionId })) as boolean;
+}
+
+export async function clearContextFiles(): Promise<number> {
+	return (await invoke('clear_context_files')) as number;
 }
 
 // ── Backup / system ─────────────────────────────────────────────

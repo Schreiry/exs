@@ -44,6 +44,21 @@ Type a query into the centre of the screen and press Enter, e.g.
 ranked product cards (FTS over name / description / category / AI tags /
 multilingual aliases) plus an AI summary.
 
+The whole scene is an input surface: after clicking elsewhere, the first
+printable key returns focus to the monumental centre composer. Completed turns
+move into the scrollable context history above it.
+
+Press **Alt+C** (or shake the mouse) to open the Action Island. Its buttons are
+not hardcoded into the page: AI, Business and Analytics branches register typed
+actions through the shared registry. See
+[Action Island integration](docs/ACTION_ISLAND.md) for the copy-paste API,
+namespacing rules and lifecycle guidance.
+
+The built-in file action opens the native system picker. Selected text and
+structured files are represented by opaque, session-only IDs; arbitrary paths
+from the webview are rejected. AI requests receive a separately bounded,
+prompt-injection-labelled file context.
+
 ## Project layout
 
 See [CLAUDE.md](CLAUDE.md) for the full architecture map, branch model, data
@@ -51,7 +66,7 @@ model, AI Gateway design, and security rules.
 
 ```
 src-tauri/   Rust/Tauri core (db, migrations, search, files, ai, commands)
-src/         SvelteKit void interface (scene, components, i18n, design tokens)
+src/         SvelteKit void interface (scene, actions, components, i18n, design tokens)
 scripts/     dev.bat / run.bat / build-release.bat
 ```
 

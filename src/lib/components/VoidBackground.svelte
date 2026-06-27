@@ -27,7 +27,7 @@
 			canvas!.width = Math.floor(w * dpr);
 			canvas!.height = Math.floor(h * dpr);
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-			const target = Math.round(Math.min(48, (w * h) / 26000) * effort);
+			const target = Math.round(Math.min(36, (w * h) / 34000) * effort);
 			particles = Array.from({ length: target }, makeParticle);
 		};
 
@@ -62,7 +62,9 @@
 				const oy = py * 28 * p.depth;
 				ctx.beginPath();
 				ctx.arc(p.x + ox, p.y + oy, p.r, 0, Math.PI * 2);
-				ctx.fillStyle = `rgba(170, 210, 220, ${p.a})`;
+				const green = 220 + Math.round(p.depth * 25);
+				const blue = 224 + Math.round(p.depth * 26);
+				ctx.fillStyle = `rgba(170, ${green}, ${blue}, ${p.a * 1.35})`;
 				ctx.fill();
 			}
 		};
@@ -116,15 +118,33 @@
 		overflow: hidden;
 		background: var(--void-0);
 	}
-	/* Layer 0: deep, slowly-waking radial gradient with cold undertone. */
+	/* A mineral aurora: expensive graphite, not a dead black backdrop. */
 	.gradient {
 		position: absolute;
-		inset: -10%;
+		inset: -14%;
 		background:
-			radial-gradient(60% 55% at 50% 38%, var(--void-3) 0%, var(--void-1) 45%, var(--void-0) 100%),
-			radial-gradient(40% 40% at 70% 80%, rgba(48, 143, 136, 0.07), transparent 70%);
+			radial-gradient(42% 38% at 18% 12%, rgba(116, 183, 255, 0.2), transparent 74%),
+			radial-gradient(38% 40% at 82% 24%, rgba(167, 132, 255, 0.16), transparent 72%),
+			radial-gradient(45% 42% at 68% 84%, rgba(77, 225, 204, 0.17), transparent 76%),
+			radial-gradient(64% 56% at 50% 42%, var(--void-3) 0%, var(--void-2) 34%, var(--void-1) 62%, var(--void-0) 100%);
 		transform: translate3d(calc(var(--px) * -14px), calc(var(--py) * -14px), 0);
 		animation: wake var(--dur-slow) var(--ease-out) both;
+	}
+	.gradient::after {
+		content: '';
+		position: absolute;
+		inset: 12%;
+		background:
+			linear-gradient(118deg, transparent 28%, rgba(255, 255, 255, 0.055) 46%, transparent 60%),
+			repeating-linear-gradient(
+				112deg,
+				transparent 0,
+				transparent 110px,
+				rgba(197, 231, 238, 0.022) 111px,
+				transparent 113px
+			);
+		filter: blur(1px);
+		opacity: 0.75;
 	}
 	/* Layer 1: particle field. */
 	.particles {
@@ -137,7 +157,9 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
-		background: radial-gradient(70% 70% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.42) 100%);
+		background:
+			linear-gradient(180deg, rgba(4, 9, 14, 0.28), transparent 16%, transparent 80%, rgba(4, 9, 14, 0.26)),
+			radial-gradient(80% 78% at 50% 44%, transparent 58%, rgba(2, 8, 13, 0.36) 100%);
 	}
 	@keyframes wake {
 		from {

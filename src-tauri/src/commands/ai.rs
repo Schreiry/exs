@@ -6,17 +6,23 @@
 // Безопасность: в провайдер уходит только минимальный релевантный контекст
 // (топ результатов поиска), не вся БД. Ключи берутся из secrets, не из кода.
 
-use crate::ai::types::{AiAnswer, AiProviderKind, ImageInput, ProductContext, ProviderStatus};
+use crate::ai::types::{
+    AiAnswer, AiProviderKind, FileContext, ImageInput, ProductContext, ProviderStatus,
+};
 use crate::ai::{self};
 use crate::db::Database;
 use crate::events::types::AiItemMetadata;
+use crate::files::local_context::{read_registered_file, ContextFileAccess};
 use crate::search::{self, ProductSearchResponse};
 use rusqlite::Connection;
 use serde::Serialize;
+use std::collections::HashSet;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 
 const MAX_CONTEXT_ITEMS: usize = 8;
+const MAX_AI_CONTEXT_FILES: usize = 10;
+const MAX_AI_CONTEXT_CHARS: usize = 96 * 1024;
 
 fn selected_provider(conn: &Connection) -> AiProviderKind {
     let s: Option<String> = conn
@@ -43,8 +49,10 @@ pub struct AssistantResponse {
 #[tauri::command]
 pub async fn assistant_query(
     db: State<'_, Database>,
+    file_access: State<'_, ContextFileAccess>,
     query: String,
     language: Option<String>,
+    context_file_ids: Option<Vec<String>>,
 ) -> Result<AssistantResponse, String> {
     // Pre-await: run search + read selected provider, then drop the lock.
     let (search_resp, selected) = {
@@ -54,6 +62,43 @@ pub async fn assistant_query(
     };
 
     let lang = language.unwrap_or_else(|| search_resp.language.clone());
+
+    let requested_ids = context_file_ids.unwrap_or_default();
+    if requested_ids.len() > MAX_AI_CONTEXT_FILES {
+        return Err(format!(
+            "Select at most {MAX_AI_CONTEXT_FILES} files for one AI request."
+        ));
+    }
+    let mut unique_ids = HashSet::new();
+    let registered_files = requested_ids
+        .iter()
+        .filter(|id| unique_ids.insert((*id).clone()))
+        .map(|id| file_access.resolve(id).map_err(|error| error.message))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // The picker accepts reasonably sized source files for local workflows,
+    // while provider context is capped separately to prevent huge requests.
+    let mut remaining_chars = MAX_AI_CONTEXT_CHARS;
+    let mut context_files = Vec::with_capacity(registered_files.len());
+    let registered_count = registered_files.len();
+    for (index, registered) in registered_files.into_iter().enumerate() {
+        let document = read_registered_file(registered)
+            .await
+            .map_err(|error| error.message)?;
+        let total_chars = document.content.chars().count();
+        // Share the remaining budget so one large first file cannot crowd out
+        // every later attachment; unused space rolls forward.
+        let remaining_files = registered_count - index;
+        let file_budget = remaining_chars / remaining_files;
+        let take_chars = total_chars.min(file_budget);
+        let content = document.content.chars().take(take_chars).collect();
+        context_files.push(FileContext {
+            name: document.file.file_name,
+            content,
+            truncated: take_chars < total_chars,
+        });
+        remaining_chars -= take_chars;
+    }
 
     // Minimal grounding context — top N hits only (never the whole DB).
     let context_items: Vec<ProductContext> = search_resp
@@ -75,6 +120,7 @@ pub async fn assistant_query(
         query,
         language: lang.clone(),
         context_items,
+        context_files,
     };
 
     let (answer, answer_error) = match router.answer(&req).await {
