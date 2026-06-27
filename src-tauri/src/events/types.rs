@@ -183,6 +183,16 @@ pub struct CategoryCount {
     pub count: i64,
 }
 
+/// Image bytes fetched from disk for frontend display. Returned as MIME +
+/// base64 so the frontend can build a `data:` URL without needing the asset
+/// protocol (which the CSP also allows, but data: URLs keep the request
+/// fully self-contained).
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemImage {
+    pub mime: String,
+    pub base64: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct InventorySummary {
     pub item_count: i64,

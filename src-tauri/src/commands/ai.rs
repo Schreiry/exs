@@ -137,21 +137,6 @@ pub async fn assistant_query(
     })
 }
 
-/// Sniff image MIME from magic bytes (we store images without an extension).
-fn sniff_mime(bytes: &[u8]) -> &'static str {
-    if bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
-        "image/png"
-    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
-        "image/jpeg"
-    } else if bytes.len() > 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
-        "image/webp"
-    } else if bytes.starts_with(b"GIF8") {
-        "image/gif"
-    } else {
-        "image/jpeg"
-    }
-}
-
 /// Analyze the stored photo of an item, persist AI metadata, reindex FTS.
 #[tauri::command]
 pub async fn analyze_item_image(
@@ -176,7 +161,7 @@ pub async fn analyze_item_image(
     let bytes = tokio::fs::read(&abs)
         .await
         .map_err(|e| format!("read image: {e}"))?;
-    let mime = sniff_mime(&bytes).to_string();
+    let mime = crate::files::sniff_mime(&bytes).to_string();
 
     use base64::{engine::general_purpose::STANDARD, Engine as _};
     let b64 = STANDARD.encode(&bytes);

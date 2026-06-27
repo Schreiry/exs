@@ -89,6 +89,11 @@ export interface CategoryCount {
 	count: number;
 }
 
+export interface ItemImage {
+	mime: string;
+	base64: string;
+}
+
 export interface InventorySummary {
 	item_count: number;
 	total_stock_units: number;

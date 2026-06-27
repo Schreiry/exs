@@ -31,3 +31,20 @@ pub async fn write_item_image(
         .map_err(|e| e.to_string())?;
     Ok(format!("images/{}", file_name))
 }
+
+/// Sniff image MIME from magic bytes. We store images without an extension
+/// (single `.img` blob per item), so we need this at read time to build the
+/// correct `data:` URL for the frontend.
+pub fn sniff_mime(bytes: &[u8]) -> &'static str {
+    if bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+        "image/png"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else if bytes.len() > 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else if bytes.starts_with(b"GIF8") {
+        "image/gif"
+    } else {
+        "image/jpeg"
+    }
+}

@@ -288,12 +288,12 @@
 		grid-template-rows: auto minmax(0, 1fr) auto;
 		padding: clamp(1rem, 3.2vw, 3rem);
 		overflow: hidden;
-		color: #f5f9ff;
+		color: var(--text-strong);
 		background:
-			linear-gradient(145deg, rgba(8, 15, 24, 0.74), rgba(5, 10, 16, 0.9)),
-			rgba(7, 12, 18, 0.76);
-		backdrop-filter: blur(28px) saturate(145%);
-		-webkit-backdrop-filter: blur(28px) saturate(145%);
+			radial-gradient(70% 55% at 50% 38%, rgba(48, 50, 51, 0.84), transparent 72%),
+			linear-gradient(145deg, rgba(22, 24, 25, 0.78), rgba(12, 13, 14, 0.92));
+		backdrop-filter: blur(30px) saturate(112%);
+		-webkit-backdrop-filter: blur(30px) saturate(112%);
 		animation: reveal 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 	}
 
@@ -304,8 +304,8 @@
 		inset: 0;
 		pointer-events: none;
 		background-image:
-			linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+			linear-gradient(rgba(235, 233, 229, 0.018) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(235, 233, 229, 0.018) 1px, transparent 1px);
 		background-size: 42px 42px;
 		mask-image: radial-gradient(circle at center, black, transparent 78%);
 	}
@@ -317,20 +317,20 @@
 		aspect-ratio: 1;
 		border-radius: 50%;
 		filter: blur(70px);
-		opacity: 0.3;
+		opacity: 0.18;
 		pointer-events: none;
 	}
 
 	.light-one {
 		top: -52%;
 		left: -12%;
-		background: #3aa9ff;
+		background: var(--accent);
 	}
 
 	.light-two {
 		right: -24%;
 		bottom: -70%;
-		background: #4fffc1;
+		background: var(--accent-bright);
 	}
 
 	.island-header,
@@ -351,7 +351,7 @@
 
 	.eyebrow {
 		margin: 0 0 0.35rem;
-		color: rgba(206, 222, 237, 0.66);
+		color: var(--text-soft);
 		font-size: 0.72rem;
 		font-weight: 600;
 		letter-spacing: 0.15em;
@@ -364,8 +364,8 @@
 		font-size: clamp(2rem, 4.6vw, 4.4rem);
 		font-weight: 420;
 		line-height: 0.98;
-		letter-spacing: -0.04em;
-		text-shadow: 0 12px 40px rgba(82, 180, 255, 0.15);
+		letter-spacing: 0;
+		text-shadow: 0 12px 40px rgba(138, 154, 140, 0.14);
 	}
 
 	button {
@@ -380,7 +380,7 @@
 		padding: 0.45rem 0.65rem 0.45rem 1rem;
 		border: 1px solid rgba(255, 255, 255, 0.14);
 		border-radius: 999px;
-		color: rgba(240, 247, 255, 0.84);
+		color: var(--text);
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
 		box-shadow:
 			inset 0 1px rgba(255, 255, 255, 0.14),
@@ -398,7 +398,7 @@
 		padding: 0.28rem 0.5rem;
 		border: 1px solid rgba(255, 255, 255, 0.11);
 		border-radius: 999px;
-		color: rgba(215, 229, 242, 0.62);
+		color: var(--text-soft);
 		background: rgba(0, 0, 0, 0.18);
 		font-family: inherit;
 		font-size: 0.68rem;
@@ -411,7 +411,7 @@
 		overflow: auto;
 		overscroll-behavior: contain;
 		scrollbar-width: thin;
-		scrollbar-color: rgba(131, 197, 255, 0.35) transparent;
+		scrollbar-color: var(--accent-soft) transparent;
 		mask-image: linear-gradient(transparent, black 1rem, black calc(100% - 1rem), transparent);
 	}
 
@@ -423,7 +423,7 @@
 	}
 
 	.action {
-		--tone: 106, 190, 255;
+		--tone: 138, 154, 140;
 		position: relative;
 		display: flex;
 		flex-direction: column;
@@ -433,7 +433,7 @@
 		overflow: hidden;
 		border: 1px solid rgba(255, 255, 255, 0.14);
 		border-radius: clamp(22px, 2.4vw, 32px);
-		color: #f5f9ff;
+		color: var(--text-strong);
 		text-align: left;
 		background:
 			linear-gradient(145deg, rgba(var(--tone), 0.13), transparent 52%),
@@ -497,19 +497,19 @@
 	}
 
 	.action.tone-accent {
-		--tone: 70, 180, 255;
+		--tone: 138, 154, 140;
 	}
 
 	.action.tone-success {
-		--tone: 72, 239, 184;
+		--tone: 128, 154, 128;
 	}
 
 	.action.tone-warning {
-		--tone: 255, 191, 84;
+		--tone: 176, 162, 118;
 	}
 
 	.action.tone-danger {
-		--tone: 255, 101, 122;
+		--tone: 184, 138, 130;
 	}
 
 	.action-top {
@@ -571,13 +571,13 @@
 		font-size: clamp(1.18rem, 1.8vw, 1.55rem);
 		font-weight: 540;
 		line-height: 1.08;
-		letter-spacing: -0.025em;
+		letter-spacing: 0;
 	}
 
 	.action-copy > span {
 		display: -webkit-box;
 		overflow: hidden;
-		color: rgba(217, 230, 242, 0.62);
+		color: var(--text-soft);
 		font-size: 0.86rem;
 		line-height: 1.45;
 		-webkit-box-orient: vertical;
@@ -588,7 +588,7 @@
 	.group {
 		align-self: flex-start;
 		margin-top: 1.1rem;
-		color: rgba(195, 214, 230, 0.42);
+		color: var(--text-faint);
 		font-size: 0.65rem;
 		font-weight: 620;
 		letter-spacing: 0.12em;
@@ -600,7 +600,7 @@
 		min-height: 40vh;
 		margin: 0;
 		place-items: center;
-		color: rgba(210, 225, 238, 0.52);
+		color: var(--text-faint);
 		font-size: clamp(1rem, 2vw, 1.3rem);
 	}
 
@@ -610,7 +610,7 @@
 		justify-content: space-between;
 		gap: 1rem;
 		padding-top: clamp(0.8rem, 2.2vh, 1.5rem);
-		color: rgba(198, 216, 232, 0.44);
+		color: var(--text-faint);
 		font-size: 0.7rem;
 		letter-spacing: 0.04em;
 	}

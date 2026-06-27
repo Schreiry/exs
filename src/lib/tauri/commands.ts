@@ -7,6 +7,7 @@ import {
 	ProductSearchResponseSchema,
 	AiStatusSchema,
 	InventorySummarySchema,
+ItemImageSchema,
 	ContextFileSelectionSchema,
 	ContextFileDocumentSchema
 } from '$lib/schemas';
@@ -17,6 +18,7 @@ import type {
 	AiItemMetadata,
 	InventorySummary,
 	Item,
+	ItemImage,
 	ListPage,
 	CreateItemPayload,
 	RestoreReport,
@@ -81,6 +83,12 @@ export async function addItem(payload: CreateItemPayload): Promise<string> {
 
 export async function saveItemImage(itemId: string, base64Data: string): Promise<string> {
 	return (await invoke('save_item_image', { itemId, base64Data })) as string;
+}
+
+export async function getItemImage(itemId: string): Promise<ItemImage | null> {
+	const raw = await invoke('get_item_image', { itemId });
+	if (raw == null) return null;
+	return ItemImageSchema.parse(raw) as ItemImage;
 }
 
 export async function seedDemoItems(): Promise<number> {

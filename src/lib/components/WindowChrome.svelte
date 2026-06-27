@@ -210,7 +210,7 @@
 		--chrome-highlight: rgba(255, 255, 255, 0.16);
 		--chrome-surface: rgba(36, 45, 47, 0.7);
 		--chrome-surface-deep: rgba(17, 23, 25, 0.82);
-		--chrome-focus: rgba(126, 230, 218, 0.76);
+		--chrome-focus: rgba(174, 184, 173, 0.76);
 		position: fixed;
 		z-index: 10000;
 		inset: 0 0 auto;
@@ -402,7 +402,7 @@
 		border-color: var(--chrome-focus);
 		box-shadow:
 			0 0 0 2px rgba(14, 22, 23, 0.92),
-			0 0 0 4px rgba(126, 230, 218, 0.42);
+			0 0 0 4px rgba(174, 184, 173, 0.42);
 		color: rgba(250, 255, 255, 0.98);
 	}
 
