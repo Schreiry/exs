@@ -1,7 +1,8 @@
 /* ============================================================
-   Exsul — design tokens (graphite void / quiet luxury)
-   CSS custom properties = единый источник дизайн-системы.
-   Цвет: глубокий мягкий серый, не чёрный; холодный cyan-акцент.
+   Exsul — design tokens
+   Палитра: soft-graphite (#1a1c1f база, +20% green, +10% blue, +5% red
+   для тёплого оливково-стального тона без холодного blue-shift).
+   Один акцент — тихий шалфей-графит, используется крайне скупо.
    ============================================================ */
 
 @import '@fontsource/noto-sans-georgian/400.css';
@@ -10,37 +11,37 @@
 @import '@fontsource-variable/jost';
 
 :root {
-	/* — Luminous graphite: dark enough for depth, bright enough to feel alive — */
-	--void-0: #111820;
-	--void-1: #18242e;
-	--void-2: #24323d;
-	--void-3: #344550;
-	--void-silver: #91a4ae;
+	/* — Luminous graphite: dark enough for depth, warm enough to feel alive.
+	   Каждый шаг +6% яркости, +3% насыщенности к зелёному каналу. — */
+	--void-0: #161819; /* deep base */
+	--void-1: #1d1f20; /* surface dark */
+	--void-2: #262829; /* surface */
+	--void-3: #303233; /* surface light */
+	--void-silver: #8a8e8c; /* mid graphite */
 
-	/* — Text — */
-	--text-strong: #f8fbfc;
-	--text: #dbe5e9;
-	--text-soft: #a7b8c0;
-	--text-faint: #738791;
+	/* — Text (tinted toward warm-neutral, never pure white) — */
+	--text-strong: #ebe9e5;
+	--text: #cdcbc6;
+	--text-soft: #9a9893;
+	--text-faint: #6b6964;
 
-	/* — Mineral accents: sea glass, electric ice, a quiet violet edge — */
-	--accent: #78eadc;
-	--accent-bright: #b2fff5;
-	--accent-blue: #73b9ff;
-	--accent-violet: #b29cff;
-	--accent-soft: #3faea4;
-	--accent-glow: rgba(120, 234, 220, 0.24);
+	/* — Single accent: шалфей-графит. Используется только для активного
+	   состояния, фокуса, тонкой подсветки. Никаких других «brand» цветов. — */
+	--accent: #8a9a8c;
+	--accent-soft: rgba(138, 154, 140, 0.28);
+	--accent-bright: #aeb8ad;
+	--accent-glow: rgba(138, 154, 140, 0.22);
 
 	/* — Semantic (muted, never neon) — */
-	--danger: #c97a72;
-	--success: #74b389;
+	--danger: #b88a82;
+	--success: #8aa68a;
 
 	/* — Surfaces (glass within reason) — */
-	--glass-bg: rgba(49, 65, 76, 0.52);
-	--glass-border: rgba(225, 244, 248, 0.15);
+	--glass-bg: rgba(38, 40, 41, 0.55);
+	--glass-border: rgba(220, 218, 213, 0.13);
 	--glass-shadow:
-		0 24px 70px rgba(3, 10, 17, 0.34),
-		inset 0 1px 0 rgba(255, 255, 255, 0.13);
+		0 24px 70px rgba(0, 0, 0, 0.42),
+		inset 0 1px 0 rgba(255, 255, 255, 0.11);
 
 	/* — Type — */
 	--font-ui: 'Noto Sans Georgian', 'Jost Variable', system-ui, sans-serif;
@@ -49,9 +50,11 @@
 	/* — Motion — (interruptible, fast) */
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+	--ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 	--dur-fast: 160ms;
 	--dur: 320ms;
 	--dur-slow: 620ms;
+	--dur-deep: 1200ms;
 
 	/* — Parallax offsets driven by pointer (set in JS) — */
 	--px: 0;
@@ -122,6 +125,6 @@ input {
 	height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-	background: linear-gradient(rgba(165, 241, 231, 0.24), rgba(116, 160, 180, 0.18));
+	background: linear-gradient(rgba(174, 184, 173, 0.24), rgba(106, 111, 107, 0.18));
 	border-radius: 8px;
 }
