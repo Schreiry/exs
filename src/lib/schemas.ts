@@ -76,3 +76,8 @@ export const InventorySummarySchema = z.object({
 	low_stock_count: z.number(),
 	top_categories: z.array(z.object({ category: z.string(), count: z.number() }))
 });
+
+export const ItemImageSchema = z.object({
+	mime: z.string(),
+	base64: z.string()
+});

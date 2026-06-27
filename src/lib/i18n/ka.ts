@@ -31,7 +31,16 @@ export const ka = {
 		analyze: 'ფოტოს ანალიზი',
 		noImage: 'ფოტო არ არის',
 		confidence: 'სიზუსტე',
-		matchedBy: 'ემთხვევა'
+		matchedBy: 'ემთხვევა',
+		upload: {
+			hint: 'ჩასმა · ჩაგდება · არჩევა',
+			hintSub: 'Ctrl+V ან ფაილის გადმოთრევა',
+			replace: 'შეცვლა',
+			uploading: 'იტვირთება…',
+			notImage: 'მხოლოდ სურათის ფაილი',
+			tooBig: 'ფაილი ძალიან დიდია (≤ 5 მბ)',
+			aria: 'ფოტოს დამატება: {title}'
+		}
 	},
 	assistant: {
 		label: 'ასისტენტი',
