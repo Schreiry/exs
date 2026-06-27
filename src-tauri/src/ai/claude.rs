@@ -1,7 +1,8 @@
 // Claude provider (Anthropic Messages API). Optional premium/high-quality path.
 // Endpoint: POST https://api.anthropic.com/v1/messages
 // Headers: x-api-key, anthropic-version: 2023-06-01.
-// Model: claude-opus-4-8 (на Opus 4.8 НЕ передаём temperature/thinking — это 400).
+// Model: claude-haiku-4-5-20251001 (fast, cheap, vision-capable). Override per
+// install via the ANTHROPIC_MODEL env var (avoids code churn when aliases shift).
 
 use crate::ai::provider::AiProvider;
 use crate::ai::types::{AiAnswer, AiError, AiProviderKind, AiRequest, ImageInput, VisionMetadata};
@@ -11,7 +12,8 @@ use serde_json::json;
 
 const ENDPOINT: &str = "https://api.anthropic.com/v1/messages";
 const API_VERSION: &str = "2023-06-01";
-const DEFAULT_MODEL: &str = "claude-opus-4-8";
+const DEFAULT_MODEL: &str = "claude-haiku-4-5-20251001";
+const MODEL_ENV: &str = "ANTHROPIC_MODEL";
 
 pub struct ClaudeProvider {
     api_key: String,
@@ -23,7 +25,13 @@ impl ClaudeProvider {
     pub fn new(api_key: String, model: Option<String>) -> Self {
         Self {
             api_key,
-            model: model.unwrap_or_else(|| DEFAULT_MODEL.to_string()),
+            model: model
+                .or_else(|| {
+                    std::env::var(MODEL_ENV)
+                        .ok()
+                        .filter(|s| !s.trim().is_empty())
+                })
+                .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
             client: super::http_client(),
         }
     }

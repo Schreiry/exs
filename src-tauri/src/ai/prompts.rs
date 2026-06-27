@@ -76,7 +76,6 @@ For Georgian, write meaning-based, natural text (not a literal translation).{hin
 }
 
 /// Instruction for the Georgian second-pass localization / self-review.
-#[allow(dead_code)]
 pub fn georgian_review_instruction(text: &str) -> String {
     format!(
         "Improve the following Georgian business text. Fix any grammar, syntax, style or \

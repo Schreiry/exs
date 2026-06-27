@@ -54,7 +54,6 @@ impl AiRouter {
     }
 
     /// Borrow the first provider — used by the Georgian self-review pass.
-    #[allow(dead_code)]
     pub fn first(&self) -> Option<&dyn AiProvider> {
         self.providers.first().map(|b| b.as_ref())
     }
