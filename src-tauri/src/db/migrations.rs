@@ -44,6 +44,15 @@ const MIGRATIONS: &[Migration] = &[
         sql: include_str!("../../migrations/004_search_fts.sql"),
         needs_fk_off: false,
     },
+    Migration {
+        // Deliberately outside the legacy Exsul range (1..32): old user
+        // databases otherwise mistake the new core migrations for migrations
+        // that were already applied by the donor application.
+        version: 1001,
+        name: "legacy_core_bridge",
+        sql: include_str!("../../migrations/1001_legacy_core_bridge.sql"),
+        needs_fk_off: false,
+    },
 ];
 
 /// Apply a single migration. First pass: whole file in one transaction
@@ -396,6 +405,86 @@ mod tests {
         run(&conn).unwrap();
         let failures = run(&conn).expect("second run must succeed");
         assert_eq!(failures, 0, "re-running migrations must be a no-op");
+    }
+
+    #[test]
+    fn bridges_legacy_items_without_losing_rows() {
+        let conn = fresh_conn();
+        conn.execute_batch(
+            "CREATE TABLE schema_migrations (
+                version INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT ''
+            );
+            INSERT INTO schema_migrations(version, name) VALUES
+                (1, 'initial_schema'),
+                (2, 'projection_triggers'),
+                (3, 'extensions'),
+                (4, 'preset_and_flowers');
+
+            CREATE TABLE events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aggregate_id TEXT NOT NULL,
+                aggregate_type TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                data TEXT NOT NULL DEFAULT '{}',
+                hlc_timestamp TEXT NOT NULL,
+                node_id TEXT NOT NULL,
+                version INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT ''
+            );
+            CREATE TABLE items (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT 'uncategorized',
+                initial_price REAL NOT NULL DEFAULT 0.0,
+                current_price REAL NOT NULL DEFAULT 0.0,
+                production_cost REAL NOT NULL DEFAULT 0.0,
+                current_stock INTEGER NOT NULL DEFAULT 0,
+                sold_count INTEGER NOT NULL DEFAULT 0,
+                revenue REAL NOT NULL DEFAULT 0.0,
+                created_at TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT '',
+                category_id TEXT,
+                image_path TEXT,
+                card_color TEXT
+            );
+            CREATE TABLE item_prices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+                price REAL NOT NULL,
+                effective_at TEXT NOT NULL,
+                event_id INTEGER NOT NULL REFERENCES events(id),
+                created_at TEXT NOT NULL DEFAULT ''
+            );
+            INSERT INTO items (
+                id, name, category, current_price, current_stock, created_at, updated_at
+            ) VALUES ('legacy-1', 'Legacy tea', 'drinks', 12.5, 3, 'old', 'old');",
+        )
+        .unwrap();
+
+        let failures = run(&conn).expect("legacy bridge must run");
+        assert_eq!(failures, 0);
+
+        let (name, description, attributes): (String, String, String) = conn
+            .query_row(
+                "SELECT name, description, attributes_json FROM items WHERE id='legacy-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(name, "Legacy tea");
+        assert_eq!(description, "");
+        assert_eq!(attributes, "{}");
+
+        let indexed: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM item_search_fts WHERE item_search_fts MATCH 'Legacy'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(indexed, 1);
     }
 
     #[test]

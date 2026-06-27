@@ -117,6 +117,10 @@ pub fn run() {
         .setup(|app| {
             log::info!("Exsul starting up (version {})", app.package_info().version);
 
+            // Explicit native-dialog selections for bounded local AI context.
+            // Kept in memory: no path permissions survive an app restart.
+            app.manage(files::local_context::ContextFileAccess::default());
+
             // NEVER returns Err; worst case in-memory DB. Recovery state is
             // persisted into local_config for the frontend banner.
             let recovery_state = db::init_with_recovery(app.handle());
@@ -162,6 +166,11 @@ pub fn run() {
             // ── Search ──
             commands::search::search_products,
             commands::search::rebuild_search_index,
+            // ── Explicit local AI context ──
+            commands::context_files::select_context_files,
+            commands::context_files::read_context_file,
+            commands::context_files::forget_context_file,
+            commands::context_files::clear_context_files,
             // ── AI Gateway ──
             commands::ai::assistant_query,
             commands::ai::analyze_item_image,

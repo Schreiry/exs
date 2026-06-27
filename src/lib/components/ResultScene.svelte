@@ -42,40 +42,47 @@
 	.scene {
 		display: flex;
 		flex-direction: column;
-		gap: 1.6rem;
-		width: min(1100px, 94vw);
+		gap: 1.8rem;
+		width: min(1240px, 94vw);
 		margin: 0 auto;
 	}
 	.stream {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		align-items: center;
+		gap: 0.7rem;
+		text-align: center;
 		animation: rise var(--dur) var(--ease-out) both;
 	}
 	.count {
-		font-size: 0.78rem;
-		letter-spacing: 0.08em;
+		font-family: var(--font-display);
+		font-size: 0.72rem;
+		font-weight: 650;
+		letter-spacing: 0.18em;
 		text-transform: uppercase;
 		color: var(--accent);
-		opacity: 0.85;
 	}
 	.summary {
 		font-family: var(--font-display);
-		font-weight: 300;
-		font-size: clamp(1.1rem, 2.2vw, 1.5rem);
-		line-height: 1.5;
+		font-weight: 590;
+		font-size: clamp(1.65rem, 3.5vw, 3.25rem);
+		line-height: 1.13;
+		letter-spacing: 0.025em;
+		text-transform: uppercase;
+		text-wrap: balance;
 		color: var(--text-strong);
-		max-width: 70ch;
+		max-width: 32ch;
+		text-shadow: 0 8px 44px rgba(122, 234, 220, 0.12);
 	}
 	.soft-error {
-		font-size: 0.82rem;
+		font-size: 0.78rem;
 		color: var(--text-soft);
 		opacity: 0.8;
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-		gap: 1rem;
+		grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+		gap: 1.15rem;
 	}
 	.empty {
 		padding: 3rem 0;
@@ -83,8 +90,10 @@
 	}
 	.empty-title {
 		font-family: var(--font-display);
-		font-size: 1.4rem;
-		color: var(--text);
+		font-size: clamp(1.6rem, 3vw, 2.5rem);
+		font-weight: 620;
+		text-transform: uppercase;
+		color: var(--text-strong);
 	}
 	.empty-hint {
 		margin-top: 0.4rem;
@@ -93,11 +102,13 @@
 	@keyframes rise {
 		from {
 			opacity: 0;
-			transform: translateY(10px);
+			transform: translateY(18px);
+			filter: blur(8px);
 		}
 		to {
 			opacity: 1;
 			transform: translateY(0);
+			filter: blur(0);
 		}
 	}
 </style>
