@@ -275,14 +275,22 @@ pub fn search_products(
         }
     }
 
-    // Fallback: substring match against name/description/category.
+    // Fallback: substring match against the same semantic surface as FTS.
     if scored.is_empty() && !terms.is_empty() {
         let like = format!("%{}%", terms.join("%"));
         let mut stmt = conn
             .prepare(
-                "SELECT id FROM items
-                 WHERE lower(name) LIKE ?1 OR lower(description) LIKE ?1 OR lower(category) LIKE ?1
-                 ORDER BY updated_at DESC LIMIT ?2",
+                "SELECT i.id FROM items i
+                 LEFT JOIN ai_item_metadata m ON m.item_id = i.id
+                 WHERE lower(i.name) LIKE ?1
+                    OR lower(i.description) LIKE ?1
+                    OR lower(i.category) LIKE ?1
+                    OR lower(COALESCE(m.tags_json, '')) LIKE ?1
+                    OR lower(COALESCE(m.aliases_json, '')) LIKE ?1
+                    OR lower(COALESCE(m.image_caption_ka, '')) LIKE ?1
+                    OR lower(COALESCE(m.image_caption_ru, '')) LIKE ?1
+                    OR lower(COALESCE(m.image_caption_en, '')) LIKE ?1
+                 ORDER BY i.updated_at DESC LIMIT ?2",
             )
             .map_err(|e| e.to_string())?;
         let ids = stmt
@@ -292,7 +300,7 @@ pub fn search_products(
             .map_err(|e| e.to_string())?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
-        scored = ids.into_iter().map(|id| (id, -0.2)).collect();
+        scored = ids.into_iter().map(|id| (id, -0.45)).collect();
     }
 
     let total = scored.len();
