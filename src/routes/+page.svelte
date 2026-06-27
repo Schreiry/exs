@@ -4,6 +4,8 @@
 	import WindowChrome from '$lib/components/WindowChrome.svelte';
 	import ContextInput from '$lib/components/ContextInput.svelte';
 	import ResultScene from '$lib/components/ResultScene.svelte';
+	import AnalyticsScene from '$lib/components/AnalyticsScene.svelte';
+	import SalesHeatmap from '$lib/components/SalesHeatmap.svelte';
 	import { ActionIsland } from '$lib/components/actions';
 	import { actionIsland, registerActions } from '$lib/actions';
 	import { scene } from '$lib/scene/scene.svelte';
@@ -673,6 +675,12 @@
 			onsubmit={submit}
 		/>
 	</section>
+
+	{#if scene.mode === 'analytics'}
+		<div class="results-wrap">
+			<AnalyticsScene />
+		</div>
+	{/if}
 
 	<footer class="scene-meta">
 		<div class="provider">

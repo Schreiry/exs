@@ -3,8 +3,9 @@
 // и бизнес-аналитика. Тяжёлый доменный SQL (orders/flowers/...) не переносился.
 
 use crate::events::types::{
-    AiItemMetadata, AuditLog, AuditLogFilter, Category, CategoryCount, CreateCategoryPayload,
-    EventRecord, InventorySummary, Item, ListPage,
+    ActivityEntry, AiCoverage, AiItemMetadata, AuditLog, AuditLogFilter, Category, CategoryBreakdown,
+    CategoryCount, CreateCategoryPayload, DeadStock, EventRecord, HeatmapCell, InventorySummary,
+    Item, ListPage, LowStockItem, StockOutForecast, TimeseriesPoint, TopSeller,
 };
 use rusqlite::{params, Connection};
 
@@ -456,6 +457,398 @@ pub fn get_inventory_summary(
     })
 }
 
+// =============================================================
+// Extended analytics — read-only views over items / events / AI.
+// All queries are non-mutating; safe to call from any command.
+// =============================================================
+
+pub fn get_top_sellers(conn: &Connection, limit: i64) -> Result<Vec<TopSeller>, String> {
+    let cap = limit.clamp(1, 100);
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, category, sold_count, revenue, current_price, current_stock
+             FROM items
+             WHERE sold_count > 0
+             ORDER BY sold_count DESC, revenue DESC
+             LIMIT ?1",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([cap], |row| {
+            Ok(TopSeller {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                category: row.get(2)?,
+                sold_count: row.get(3)?,
+                revenue: row.get(4)?,
+                current_price: row.get(5)?,
+                current_stock: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+pub fn get_dead_stock(conn: &Connection, limit: i64) -> Result<Vec<DeadStock>, String> {
+    let cap = limit.clamp(1, 100);
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, category, current_stock, current_price,
+                    (current_stock * current_price) AS locked_value
+             FROM items
+             WHERE sold_count = 0 AND current_stock > 0
+             ORDER BY locked_value DESC, current_stock DESC
+             LIMIT ?1",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([cap], |row| {
+            Ok(DeadStock {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                category: row.get(2)?,
+                current_stock: row.get(3)?,
+                current_price: row.get(4)?,
+                locked_value: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+pub fn get_low_stock_items(
+    conn: &Connection,
+    threshold: i64,
+    limit: i64,
+) -> Result<Vec<LowStockItem>, String> {
+    let cap = limit.clamp(1, 200);
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, category, current_stock, current_price
+             FROM items
+             WHERE current_stock <= ?1
+             ORDER BY current_stock ASC, name ASC
+             LIMIT ?2",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![threshold, cap], |row| {
+            Ok(LowStockItem {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                category: row.get(2)?,
+                current_stock: row.get(3)?,
+                current_price: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+pub fn get_category_breakdown(conn: &Connection) -> Result<Vec<CategoryBreakdown>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT category,
+                    COUNT(*)                              AS item_count,
+                    COALESCE(SUM(current_stock), 0)       AS stock_units,
+                    COALESCE(SUM(current_stock * current_price), 0.0) AS stock_value,
+                    COALESCE(SUM(revenue), 0.0)           AS revenue,
+                    COALESCE(SUM(sold_count), 0)          AS sold_count
+             FROM items
+             GROUP BY category
+             ORDER BY revenue DESC, COUNT(*) DESC",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(CategoryBreakdown {
+                category: row.get(0)?,
+                item_count: row.get(1)?,
+                stock_units: row.get(2)?,
+                stock_value: row.get(3)?,
+                revenue: row.get(4)?,
+                sold_count: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+/// Sales time-series over the events ledger. `bucket` ∈ "day" | "week" | "month".
+/// `since` is an optional ISO-8601 lower bound on `created_at`. Returns points in
+/// ascending bucket order.
+pub fn get_sales_timeseries(
+    conn: &Connection,
+    bucket: &str,
+    since: Option<&str>,
+) -> Result<Vec<TimeseriesPoint>, String> {
+    let bucket_expr = match bucket {
+        "day" => "strftime('%Y-%m-%d', created_at)",
+        "week" => "strftime('%Y-W%W', created_at)",
+        "month" => "strftime('%Y-%m', created_at)",
+        _ => return Err(format!("invalid bucket '{}': expected day|week|month", bucket)),
+    };
+    let sql = format!(
+        "SELECT {bucket_expr} AS bucket,
+                COUNT(*),
+                COALESCE(SUM(CAST(json_extract(data, '$.quantity') AS INTEGER)), 0),
+                COALESCE(SUM(
+                    CAST(COALESCE(json_extract(data, '$.sale_price'), 0) AS REAL)
+                    * CAST(COALESCE(json_extract(data, '$.quantity'), 1) AS INTEGER)
+                ), 0.0)
+         FROM events
+         WHERE event_type = 'SaleRecorded'
+           AND (?1 IS NULL OR created_at >= ?1)
+         GROUP BY bucket
+         ORDER BY bucket ASC"
+    );
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![since], |row| {
+            Ok(TimeseriesPoint {
+                bucket: row.get(0)?,
+                sales_count: row.get(1)?,
+                units_sold: row.get(2)?,
+                revenue: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+pub fn get_ai_coverage(conn: &Connection) -> Result<AiCoverage, String> {
+    let (total, with_ka, with_tags, with_aliases, latest): (i64, i64, i64, i64, Option<String>) =
+        conn.query_row(
+            "SELECT
+                (SELECT COUNT(*) FROM items),
+                (SELECT COUNT(*) FROM ai_item_metadata WHERE image_caption_ka IS NOT NULL AND image_caption_ka != ''),
+                (SELECT COUNT(*) FROM ai_item_metadata WHERE tags_json != '[]'),
+                (SELECT COUNT(*) FROM ai_item_metadata WHERE aliases_json != '[]'),
+                (SELECT MAX(ai_updated_at) FROM ai_item_metadata)",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(AiCoverage {
+        total_items: total,
+        with_caption_ka: with_ka,
+        with_tags,
+        with_aliases,
+        latest_ai_update: latest,
+    })
+}
+
+/// Latest business events with a human-readable per-row summary. Filters to
+/// the event types that matter for an SMB owner (no internal scaffolding).
+pub fn get_recent_activity(conn: &Connection, limit: i64) -> Result<Vec<ActivityEntry>, String> {
+    let cap = limit.clamp(1, 200);
+    let mut stmt = conn
+        .prepare(
+            "SELECT e.event_type, e.aggregate_id, e.hlc_timestamp, e.created_at, e.data,
+                    COALESCE(i.name, '')
+             FROM events e
+             LEFT JOIN items i ON i.id = e.aggregate_id
+             WHERE e.event_type IN ('ItemCreated','SaleRecorded','StockAdjusted','PriceChanged')
+             ORDER BY e.id DESC
+             LIMIT ?1",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([cap], |row| {
+            let event_type: String = row.get(0)?;
+            let item_id: String = row.get(1)?;
+            let hlc_timestamp: String = row.get(2)?;
+            let created_at: Option<String> = row.get(3)?;
+            let data_str: String = row.get(4)?;
+            let item_name: String = row.get(5)?;
+            let data: serde_json::Value =
+                serde_json::from_str(&data_str).unwrap_or(serde_json::Value::Null);
+            let summary = summarize_event(&event_type, &item_name, &data);
+            Ok(ActivityEntry {
+                event_type,
+                item_id,
+                item_name,
+                summary,
+                hlc_timestamp,
+                created_at,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+/// Build a short, locale-neutral summary string for an event row. The
+/// frontend can choose to translate further; this keeps the Rust side free of
+/// hard-coded KA strings (mirrors the i18n rule for prompts).
+fn summarize_event(event_type: &str, item_name: &str, data: &serde_json::Value) -> String {
+    match event_type {
+        "ItemCreated" => format!("created: {}", item_name),
+        "SaleRecorded" => {
+            let qty = data.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+            let price = data.get("sale_price").and_then(|v| v.as_f64());
+            match price {
+                Some(p) => format!("sold {} × {} ({:.2})", qty, item_name, p),
+                None => format!("sold {} × {}", qty, item_name),
+            }
+        }
+        "StockAdjusted" => {
+            let delta = data.get("delta").and_then(|v| v.as_i64()).unwrap_or(0);
+            if delta >= 0 {
+                format!("stock +{} ({})", delta, item_name)
+            } else {
+                format!("stock {} ({})", delta, item_name)
+            }
+        }
+        "PriceChanged" => {
+            let price = data.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            format!("price → {:.2} ({})", price, item_name)
+        }
+        _ => format!("{}: {}", event_type, item_name),
+    }
+}
+
+/// Sales heatmap over the events ledger. Aggregates SaleRecorded events into
+/// a (weekday 0..6, hour 0..23) grid. Only non-zero cells are emitted; the
+/// frontend zero-fills for the grid render. `since_iso` is an optional lower
+/// bound on `created_at` (e.g. "2026-01-01" or a full ISO timestamp).
+pub fn get_sales_heatmap(
+    conn: &Connection,
+    since_iso: Option<&str>,
+) -> Result<Vec<HeatmapCell>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT CAST(strftime('%w', created_at) AS INTEGER) AS weekday,
+                    CAST(strftime('%H', created_at) AS INTEGER) AS hour,
+                    COALESCE(SUM(
+                        CAST(COALESCE(json_extract(data, '$.sale_price'), 0) AS REAL)
+                        * CAST(COALESCE(json_extract(data, '$.quantity'), 1) AS INTEGER)
+                    ), 0.0) AS revenue,
+                    COALESCE(SUM(CAST(COALESCE(json_extract(data, '$.quantity'), 1) AS INTEGER)), 0) AS units
+             FROM events
+             WHERE event_type = 'SaleRecorded'
+               AND (?1 IS NULL OR created_at >= ?1)
+             GROUP BY weekday, hour
+             ORDER BY weekday ASC, hour ASC",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![since_iso], |row| {
+            let weekday: i64 = row.get(0)?;
+            let hour: i64 = row.get(1)?;
+            Ok(HeatmapCell {
+                weekday: weekday.clamp(0, 6) as u8,
+                hour: hour.clamp(0, 23) as u8,
+                revenue: row.get(2)?,
+                units: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
+/// Predict which items will run out of stock soon, based on historical sales
+/// velocity. Items must have at least `min_sales` SaleRecorded events AND a
+/// positive current_stock to be included (no-point predicting items that
+/// already exhausted stock or never sold). Sorted by days-until-stockout ASC
+/// (most urgent first).
+///
+/// Velocity = sold_count / (now - first_sale_at). The "now" reference is the
+/// real wall-clock (`datetime('now')`) — this gives a sensible forecast even
+/// when the user just started recording sales today.
+pub fn get_stock_out_forecast(
+    conn: &Connection,
+    limit: i64,
+    min_sales: i64,
+) -> Result<Vec<StockOutForecast>, String> {
+    let cap = limit.clamp(1, 100);
+    let min_sales = min_sales.max(1);
+
+    let mut stmt = conn
+        .prepare(
+            "WITH first_sales AS (
+                SELECT aggregate_id AS item_id,
+                       MIN(hlc_timestamp) AS first_sale_at,
+                       COUNT(*) AS sale_events
+                FROM events
+                WHERE event_type = 'SaleRecorded'
+                GROUP BY aggregate_id
+            )
+            SELECT i.id,
+                   i.name,
+                   i.category,
+                   i.current_stock,
+                   i.sold_count,
+                   fs.first_sale_at,
+                   fs.sale_events,
+                   CAST((julianday(datetime('now')) - julianday(fs.first_sale_at)) AS REAL) AS history_days
+            FROM items i
+            JOIN first_sales fs ON fs.item_id = i.id
+            WHERE i.current_stock > 0
+              AND fs.sale_events >= ?1
+              AND fs.first_sale_at IS NOT NULL
+              AND julianday(datetime('now')) > julianday(fs.first_sale_at)
+            ORDER BY
+                CASE WHEN i.sold_count > 0
+                     THEN CAST(i.current_stock AS REAL) * (julianday(datetime('now')) - julianday(fs.first_sale_at))
+                          / CAST(i.sold_count AS REAL)
+                     ELSE 1e18 END ASC
+            LIMIT ?2",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![min_sales, cap], |row| {
+            let id: String = row.get(0)?;
+            let name: String = row.get(1)?;
+            let category: String = row.get(2)?;
+            let current_stock: i64 = row.get(3)?;
+            let sold_count: i64 = row.get(4)?;
+            let first_sale_at: Option<String> = row.get(5)?;
+            let history_days: f64 = row.get(7)?;
+
+            let velocity_per_day = if history_days > 0.0 && sold_count > 0 {
+                sold_count as f64 / history_days
+            } else {
+                0.0
+            };
+            let days_until_stockout = if velocity_per_day > 0.0 {
+                current_stock as f64 / velocity_per_day
+            } else {
+                f64::INFINITY
+            };
+
+            Ok(StockOutForecast {
+                id,
+                name,
+                category,
+                current_stock,
+                sold_count,
+                velocity_per_day,
+                days_until_stockout,
+                first_sale_at,
+                history_days,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -529,5 +922,294 @@ mod tests {
         let cats = get_categories(&conn).unwrap();
         assert_eq!(cats.len(), 1);
         assert_eq!(cats[0].name, "სასმელები");
+    }
+
+    // ── Extended analytics tests ─────────────────────────────────
+
+    fn append(conn: &Connection, agg: &str, ev: &str, data: &str, hlc: &str) {
+        // Mirror production: bump version per (aggregate_id, node_id) pair to
+        // satisfy UNIQUE(aggregate_id, node_id, version). Also pin created_at
+        // to the HLC value so time-series bucketing uses the test's logical
+        // timestamp rather than the wall-clock default.
+        let next = get_next_version(conn, agg, "n").unwrap();
+        conn.execute(
+            "INSERT INTO events (aggregate_id, aggregate_type, event_type, data, hlc_timestamp, node_id, version, created_at)
+             VALUES (?1, 'item', ?2, ?3, ?4, 'n', ?5, ?4)",
+            params![agg, ev, data, hlc, next],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn top_sellers_orders_by_sold_count() {
+        let conn = db();
+        // Two items: a sells more, b sells less but with higher revenue.
+        seed_item(&conn, "a", "A", 10.0, 5);
+        seed_item(&conn, "b", "B", 50.0, 5);
+        // a: 3 sales × 10 = 30 revenue, 3 sold. b: 1 sale × 50 = 50 revenue, 1 sold.
+        append(&conn, "a", "SaleRecorded", "{\"quantity\":3,\"sale_price\":10}", "1:0:n");
+        append(&conn, "b", "SaleRecorded", "{\"quantity\":1,\"sale_price\":50}", "1:1:n");
+
+        let sellers = get_top_sellers(&conn, 10).unwrap();
+        assert_eq!(sellers.len(), 2);
+        assert_eq!(sellers[0].id, "a", "higher sold_count wins over higher revenue");
+        assert_eq!(sellers[0].sold_count, 3);
+    }
+
+    #[test]
+    fn dead_stock_excludes_zero_stock_and_sold_items() {
+        let conn = db();
+        seed_item(&conn, "stuck", "Stuck", 20.0, 10); // dead: stock>0, sold=0
+        seed_item(&conn, "sold", "SoldOut", 20.0, 0); // not dead: stock=0
+        append(&conn, "sold", "SaleRecorded", "{\"quantity\":10,\"sale_price\":20}", "1:0:n");
+
+        let dead = get_dead_stock(&conn, 10).unwrap();
+        assert_eq!(dead.len(), 1);
+        assert_eq!(dead[0].id, "stuck");
+        assert!((dead[0].locked_value - 200.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn category_breakdown_sums_match() {
+        let conn = db();
+        seed_item(&conn, "a", "A", 10.0, 5);
+        seed_item(&conn, "b", "B", 20.0, 3);
+        seed_item(&conn, "c", "C", 30.0, 2);
+        append(&conn, "a", "SaleRecorded", "{\"quantity\":2,\"sale_price\":10}", "1:0:n");
+        append(&conn, "b", "SaleRecorded", "{\"quantity\":1,\"sale_price\":20}", "1:1:n");
+
+        let cats = get_category_breakdown(&conn).unwrap();
+        assert!(!cats.is_empty());
+        let total_rev: f64 = cats.iter().map(|c| c.revenue).sum();
+        assert!((total_rev - 40.0).abs() < 1e-6, "sum of category revenue should equal sum of recorded sales");
+    }
+
+    #[test]
+    fn sales_timeseries_buckets_by_day() {
+        let conn = db();
+        seed_item(&conn, "a", "A", 10.0, 5);
+        // Two SaleRecorded events on the same day — should collapse into one bucket.
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":2,\"sale_price\":10}",
+            "2026-06-15T10:00:00.000",
+        );
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":3,\"sale_price\":10}",
+            "2026-06-15T18:30:00.000",
+        );
+        // A different day.
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":1,\"sale_price\":10}",
+            "2026-06-16T09:00:00.000",
+        );
+
+        let ts = get_sales_timeseries(&conn, "day", None).unwrap();
+        assert_eq!(ts.len(), 2);
+        assert_eq!(ts[0].bucket, "2026-06-15");
+        assert_eq!(ts[0].units_sold, 5);
+        assert_eq!(ts[0].sales_count, 2);
+        assert_eq!(ts[1].bucket, "2026-06-16");
+        assert_eq!(ts[1].units_sold, 1);
+    }
+
+    #[test]
+    fn sales_timeseries_rejects_invalid_bucket() {
+        let conn = db();
+        let res = get_sales_timeseries(&conn, "hour", None);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn ai_coverage_counts_only_items_with_metadata() {
+        let conn = db();
+        seed_item(&conn, "a", "A", 10.0, 5);
+        seed_item(&conn, "b", "B", 10.0, 5);
+        // a: with caption + tags + aliases; b: none.
+        let meta = crate::events::types::AiItemMetadata {
+            item_id: "a".into(),
+            image_caption_ka: Some("სურათი".into()),
+            tags: vec!["t".into()],
+            aliases: vec!["x".into()],
+            ..Default::default()
+        };
+        upsert_ai_metadata(&conn, &meta).unwrap();
+
+        let cov = get_ai_coverage(&conn).unwrap();
+        assert_eq!(cov.total_items, 2);
+        assert_eq!(cov.with_caption_ka, 1);
+        assert_eq!(cov.with_tags, 1);
+        assert_eq!(cov.with_aliases, 1);
+        assert!(cov.latest_ai_update.is_some());
+    }
+
+    #[test]
+    fn recent_activity_filters_event_types() {
+        let conn = db();
+        seed_item(&conn, "a", "A", 10.0, 5);
+        // Internal-looking event type that should NOT appear in the activity feed.
+        append(&conn, "a", "ItemUpdated", "{\"name\":\"A2\"}", "1:0:n");
+        append(&conn, "a", "SaleRecorded", "{\"quantity\":1,\"sale_price\":10}", "1:1:n");
+
+        let feed = get_recent_activity(&conn, 10).unwrap();
+        let types: Vec<&str> = feed.iter().map(|f| f.event_type.as_str()).collect();
+        assert!(types.contains(&"SaleRecorded"));
+        assert!(!types.contains(&"ItemUpdated"), "internal ItemUpdated must be filtered out");
+        assert!(feed[0].summary.contains("sold"), "summary should be human-readable");
+    }
+
+    // ── Stock-out forecast tests ────────────────────────────────
+
+    #[test]
+    fn stock_out_forecast_excludes_no_sales_and_zero_stock() {
+        let conn = db();
+        seed_item(&conn, "dead", "Dead", 10.0, 5); // never sold — excluded
+        seed_item(&conn, "empty", "Empty", 10.0, 0); // zero stock — excluded
+        append(&conn, "empty", "SaleRecorded", "{\"quantity\":5,\"sale_price\":10}", "2026-06-15T10:00:00.000");
+        seed_item(&conn, "live", "Live", 10.0, 5);
+        append(&conn, "live", "SaleRecorded", "{\"quantity\":1,\"sale_price\":10}", "2026-06-15T10:00:00.000");
+        append(&conn, "live", "SaleRecorded", "{\"quantity\":1,\"sale_price\":10}", "2026-06-25T10:00:00.000");
+
+        let fc = get_stock_out_forecast(&conn, 10, 2).unwrap();
+        assert_eq!(fc.len(), 1);
+        assert_eq!(fc[0].id, "live");
+        assert!(fc[0].velocity_per_day > 0.0);
+        assert!(fc[0].days_until_stockout.is_finite());
+    }
+
+    #[test]
+    fn stock_out_forecast_orders_by_urgency() {
+        let conn = db();
+        // 'fast' sells a lot over a wide window — velocity high → small stockout window
+        // 'slow' sells little over the same window → big stockout window
+        // Both must keep current_stock > 0 after sales (initial_stock ≥ total sales).
+        seed_item(&conn, "fast", "Fast", 10.0, 20);
+        seed_item(&conn, "slow", "Slow", 10.0, 20);
+        // fast: 10 sales; slow: 5 sales — same time window, different velocities.
+        for i in 0..10 {
+            append(
+                &conn,
+                "fast",
+                "SaleRecorded",
+                "{\"quantity\":1,\"sale_price\":10}",
+                &format!("2026-06-{:02}T10:00:00.000", i + 1),
+            );
+            if i < 5 {
+                append(
+                    &conn,
+                    "slow",
+                    "SaleRecorded",
+                    "{\"quantity\":1,\"sale_price\":10}",
+                    &format!("2026-06-{:02}T10:00:00.000", i + 1),
+                );
+            }
+        }
+
+        let fc = get_stock_out_forecast(&conn, 10, 5).unwrap();
+        assert_eq!(fc.len(), 2);
+        assert_eq!(fc[0].id, "fast", "fast stockout must come first");
+        assert_eq!(fc[1].id, "slow");
+        assert!(
+            fc[0].days_until_stockout < fc[1].days_until_stockout,
+            "fast must run out sooner than slow (fast={}, slow={})",
+            fc[0].days_until_stockout,
+            fc[1].days_until_stockout
+        );
+    }
+
+    #[test]
+    fn stock_out_forecast_respects_min_sales() {
+        let conn = db();
+        seed_item(&conn, "single", "Single", 10.0, 5);
+        append(
+            &conn,
+            "single",
+            "SaleRecorded",
+            "{\"quantity\":1,\"sale_price\":10}",
+            "2026-06-15T10:00:00.000",
+        );
+        // min_sales=2 excludes the single-sale item.
+        let fc = get_stock_out_forecast(&conn, 10, 2).unwrap();
+        assert!(fc.is_empty());
+        // min_sales=1 includes it.
+        let fc = get_stock_out_forecast(&conn, 10, 1).unwrap();
+        assert_eq!(fc.len(), 1);
+    }
+
+    // ── Heatmap tests ────────────────────────────────────────────
+
+    #[test]
+    fn heatmap_groups_by_weekday_and_hour() {
+        let conn = db();
+        seed_item(&conn, "a", "A", 10.0, 50);
+        // 2026-06-15 was a Monday (weekday=1). 14:00 hour.
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":3,\"sale_price\":10}",
+            "2026-06-15T14:30:00.000",
+        );
+        // Same hour, different day → another cell.
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":2,\"sale_price\":10}",
+            "2026-06-17T14:45:00.000", // Wednesday=3
+        );
+        // Same weekday, different hour.
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":1,\"sale_price\":10}",
+            "2026-06-15T09:00:00.000",
+        );
+
+        let hm = get_sales_heatmap(&conn, None).unwrap();
+        assert_eq!(hm.len(), 3, "three distinct (weekday,hour) cells");
+
+        // Mon@14:00 should have revenue 30 (3 × 10), units 3.
+        let mon14 = hm.iter().find(|c| c.weekday == 1 && c.hour == 14).unwrap();
+        assert!((mon14.revenue - 30.0).abs() < 1e-6);
+        assert_eq!(mon14.units, 3);
+
+        // Mon@09:00 should be its own cell with revenue 10.
+        let mon9 = hm.iter().find(|c| c.weekday == 1 && c.hour == 9).unwrap();
+        assert!((mon9.revenue - 10.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn heatmap_respects_since_filter() {
+        let conn = db();
+        seed_item(&conn, "a", "A", 10.0, 20);
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":1,\"sale_price\":10}",
+            "2026-06-15T14:00:00.000",
+        );
+        append(
+            &conn,
+            "a",
+            "SaleRecorded",
+            "{\"quantity\":1,\"sale_price\":10}",
+            "2026-05-01T14:00:00.000", // before the filter
+        );
+
+        let since = Some("2026-06-01");
+        let hm = get_sales_heatmap(&conn, since).unwrap();
+        assert_eq!(hm.len(), 1);
+        assert!((hm[0].revenue - 10.0).abs() < 1e-6);
     }
 }

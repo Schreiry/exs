@@ -6,7 +6,7 @@
 import { assistantQuery, isTauri } from '$lib/tauri/commands';
 import type { AssistantResponse, ProductSearchResult } from '$lib/types';
 
-export type SceneMode = 'idle' | 'searching' | 'results' | 'error';
+export type SceneMode = 'idle' | 'searching' | 'results' | 'analytics' | 'error';
 
 export interface SceneTurn {
 	id: string;
@@ -30,6 +30,23 @@ function detectLang(text: string): 'ru' | 'ka' | 'en' {
 	return 'en';
 }
 
+// Lightweight keyword gate — no AI call, no latency. Detects when the user is
+// asking for an analytics / business overview rather than a product search.
+const ANALYTICS_PATTERNS: RegExp[] = [
+	// Georgian
+	/\b(ანალიზ|სტატისტიკ|რეპორტ|ბიზნეს|მარაგ|გაყიდვ|შემოსავალ|რა\s+იყიდება|რა\s+იწვა|რა\s+მარაგი|რა\s+მდგომარეობა)\b/i,
+	// Russian
+	/\b(анализ|статистик|отчёт|отчет|бизнес|запас|залежал|продаж|доход|выручк)\w*/i,
+	// English
+	/\b(analytics|statistic|report|business|dead\s*stock|low\s*stock|sales|revenue|overview|insights?)\b/i
+];
+
+export function isAnalyticsQuery(text: string): boolean {
+	const t = text.trim();
+	if (!t) return false;
+	return ANALYTICS_PATTERNS.some((re) => re.test(t));
+}
+
 class SceneState {
 	mode = $state<SceneMode>('idle');
 	query = $state('');
@@ -46,8 +63,21 @@ class SceneState {
 		const query = raw.trim();
 		if (!query || this.mode === 'searching') return;
 		this.query = query;
-		this.mode = 'searching';
 		this.error = null;
+
+		// Analytics-intent queries bypass the AI gateway and load directly.
+		// We mark them as 'searching' briefly so the UI shows the think pulse,
+		// then the page flips to 'analytics' on render.
+		if (isAnalyticsQuery(query)) {
+			this.mode = 'searching';
+			// Tiny defer so the pulse paints before the parallel fetches land.
+			await new Promise((r) => setTimeout(r, 16));
+			this.mode = 'analytics';
+			this.history = [query, ...this.history.filter((h) => h !== query)].slice(0, 12);
+			return;
+		}
+
+		this.mode = 'searching';
 		try {
 			const resp = isTauri()
 				? await assistantQuery(query, undefined, [...contextFileIds])

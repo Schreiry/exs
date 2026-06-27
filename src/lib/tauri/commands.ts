@@ -7,9 +7,18 @@ import {
 	ProductSearchResponseSchema,
 	AiStatusSchema,
 	InventorySummarySchema,
-ItemImageSchema,
+	ItemImageSchema,
 	ContextFileSelectionSchema,
-	ContextFileDocumentSchema
+	ContextFileDocumentSchema,
+	TopSellerSchema,
+	DeadStockSchema,
+	LowStockItemSchema,
+	CategoryBreakdownSchema,
+	TimeseriesPointSchema,
+	AiCoverageSchema,
+	ActivityEntrySchema,
+	StockOutForecastSchema,
+	HeatmapCellSchema
 } from '$lib/schemas';
 import type {
 	AssistantResponse,
@@ -23,7 +32,17 @@ import type {
 	CreateItemPayload,
 	RestoreReport,
 	ContextFileSelection,
-	ContextFileDocument
+	ContextFileDocument,
+	TopSeller,
+	DeadStock,
+	LowStockItem,
+	CategoryBreakdown,
+	TimeseriesPoint,
+	AiCoverage,
+	ActivityEntry,
+	StockOutForecast,
+	HeatmapCell,
+	SalesBucket
 } from '$lib/types';
 
 /** Detect whether we're running inside the Tauri webview (vs plain browser dev). */
@@ -137,4 +156,63 @@ export async function importBackup(path: string): Promise<RestoreReport> {
 
 export async function getAppVersion(): Promise<string> {
 	return (await invoke('get_app_version')) as string;
+}
+
+// ── Analytics ─────────────────────────────────────────────────────
+
+export async function getTopSellers(limit?: number): Promise<TopSeller[]> {
+	const raw = await invoke<TopSeller[]>('get_top_sellers', { limit });
+	return raw.map((r) => TopSellerSchema.parse(r));
+}
+
+export async function getDeadStock(limit?: number): Promise<DeadStock[]> {
+	const raw = await invoke<DeadStock[]>('get_dead_stock', { limit });
+	return raw.map((r) => DeadStockSchema.parse(r));
+}
+
+export async function getLowStockItems(
+	threshold?: number,
+	limit?: number
+): Promise<LowStockItem[]> {
+	const raw = await invoke<LowStockItem[]>('get_low_stock_items', { threshold, limit });
+	return raw.map((r) => LowStockItemSchema.parse(r));
+}
+
+export async function getCategoryBreakdown(): Promise<CategoryBreakdown[]> {
+	const raw = await invoke<CategoryBreakdown[]>('get_category_breakdown');
+	return raw.map((r) => CategoryBreakdownSchema.parse(r));
+}
+
+export async function getSalesTimeseries(
+	bucket: SalesBucket = 'day',
+	since?: string
+): Promise<TimeseriesPoint[]> {
+	const raw = await invoke<TimeseriesPoint[]>('get_sales_timeseries', { bucket, since });
+	return raw.map((r) => TimeseriesPointSchema.parse(r));
+}
+
+export async function getAiCoverage(): Promise<AiCoverage> {
+	const raw = await invoke('get_ai_coverage');
+	return AiCoverageSchema.parse(raw) as AiCoverage;
+}
+
+export async function getRecentActivity(limit?: number): Promise<ActivityEntry[]> {
+	const raw = await invoke<ActivityEntry[]>('get_recent_activity', { limit });
+	return raw.map((r) => ActivityEntrySchema.parse(r));
+}
+
+export async function getStockOutForecast(
+	limit?: number,
+	minSales?: number
+): Promise<StockOutForecast[]> {
+	const raw = await invoke<StockOutForecast[]>('get_stock_out_forecast', {
+		limit,
+		minSales
+	});
+	return raw.map((r) => StockOutForecastSchema.parse(r));
+}
+
+export async function getSalesHeatmap(since?: string): Promise<HeatmapCell[]> {
+	const raw = await invoke<HeatmapCell[]>('get_sales_heatmap', { since });
+	return raw.map((r) => HeatmapCellSchema.parse(r));
 }
