@@ -238,10 +238,11 @@ pub fn get_item_image(
     // Resolve the relative path from the DB (no file I/O under lock).
     let rel: Option<String> = {
         let conn = db.conn.lock().map_err(|e| e.to_string())?;
-        crate::db::queries::get_item_by_id(&conn, &item_id)?
-            .and_then(|i| i.image_path)
+        crate::db::queries::get_item_by_id(&conn, &item_id)?.and_then(|i| i.image_path)
     };
-    let Some(rel) = rel else { return Ok(None); };
+    let Some(rel) = rel else {
+        return Ok(None);
+    };
 
     let app_dir = handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let abs = app_dir.join(&rel);
