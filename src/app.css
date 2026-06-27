@@ -1,0 +1,106 @@
+/* ============================================================
+   Exsul — design tokens (graphite void / quiet luxury)
+   CSS custom properties = единый источник дизайн-системы.
+   Цвет: глубокий мягкий серый, не чёрный; холодный cyan-акцент.
+   ============================================================ */
+
+@import '@fontsource/noto-sans-georgian/400.css';
+@import '@fontsource/noto-sans-georgian/500.css';
+@import '@fontsource/noto-sans-georgian/600.css';
+@import '@fontsource-variable/jost';
+
+:root {
+	/* — Void background layers (deep soft grey, cold undertone) — */
+	--void-0: #14171b; /* deepest */
+	--void-1: #181c21;
+	--void-2: #1d2228;
+	--void-3: #232a31;
+
+	/* — Text — */
+	--text-strong: #eef2f5; /* off-white */
+	--text: #c4ccd4; /* silver */
+	--text-soft: #8b97a3; /* grey-blue */
+	--text-faint: #5b6772;
+
+	/* — Accent: cold cyan/green, very restrained — */
+	--accent: #4fd1c5;
+	--accent-soft: #2f8f88;
+	--accent-glow: rgba(79, 209, 197, 0.18);
+
+	/* — Semantic (muted, never neon) — */
+	--danger: #c97a72;
+	--success: #74b389;
+
+	/* — Surfaces (glass within reason) — */
+	--glass-bg: rgba(35, 42, 49, 0.55);
+	--glass-border: rgba(160, 180, 195, 0.08);
+	--glass-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+
+	/* — Type — */
+	--font-ui: 'Noto Sans Georgian', 'Jost Variable', system-ui, sans-serif;
+	--font-display: 'Jost Variable', 'Noto Sans Georgian', system-ui, sans-serif;
+
+	/* — Motion — (interruptible, fast) */
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+	--dur-fast: 160ms;
+	--dur: 320ms;
+	--dur-slow: 620ms;
+
+	/* — Parallax offsets driven by pointer (set in JS) — */
+	--px: 0;
+	--py: 0;
+
+	color-scheme: dark;
+}
+
+/* Reduced-motion / low-effect: respect OS preference. */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--dur-fast: 0ms;
+		--dur: 0ms;
+		--dur-slow: 0ms;
+	}
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html,
+body {
+	height: 100%;
+	background: var(--void-0);
+	color: var(--text);
+	font-family: var(--font-ui);
+	font-size: 16px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+	overflow: hidden;
+}
+
+button {
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+::selection {
+	background: var(--accent-glow);
+	color: var(--text-strong);
+}
+
+/* Thin, quiet scrollbars. */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+::-webkit-scrollbar-thumb {
+	background: rgba(160, 180, 195, 0.12);
+	border-radius: 8px;
+}
