@@ -145,13 +145,14 @@
 	.stream {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: flex-start;
 		gap: 0.7rem;
-		text-align: center;
+		text-align: left;
 		animation: rise var(--dur) var(--ease-out) both;
+		width: 100%;
 	}
 	.count {
-		font-family: var(--font-display);
+		font-family: var(--font-ui);
 		font-size: 0.72rem;
 		font-weight: 650;
 		letter-spacing: 0.18em;
@@ -159,16 +160,17 @@
 		color: var(--accent);
 	}
 	.summary {
-		font-family: var(--font-display);
-		font-weight: 590;
-		font-size: clamp(1.65rem, 3.5vw, 3.25rem);
-		line-height: 1.13;
-		letter-spacing: 0.025em;
-		text-transform: uppercase;
-		text-wrap: balance;
+		/* Use UI font (Noto Sans Georgian + Jost) — Jost display has no
+		   Mkhedruli glyphs and falls back to a cramped system font. */
+		font-family: var(--font-ui);
+		font-weight: 400;
+		font-size: clamp(1rem, 1.55vw, 1.18rem);
+		line-height: 1.65;
+		letter-spacing: 0.005em;
 		color: var(--text-strong);
-		max-width: 32ch;
-		text-shadow: 0 8px 44px rgba(122, 234, 220, 0.12);
+		max-width: 70ch;
+		text-align: left;
+		align-self: flex-start;
 	}
 	.soft-error {
 		font-size: 0.78rem;

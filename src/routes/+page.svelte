@@ -721,30 +721,31 @@
 	.kicker {
 		color: var(--accent);
 		font-family: var(--font-display);
-		font-size: 0.65rem;
-		font-weight: 650;
-		letter-spacing: 0.28em;
+		font-size: 0.58rem;
+		font-weight: 600;
+		letter-spacing: 0.32em;
+		opacity: 0.7;
 	}
 	.hero h1 {
 		margin-top: 0.3rem;
 		color: var(--text-strong);
 		font-family: var(--font-display);
-		font-size: clamp(3.5rem, 8.5vw, 7.8rem);
-		font-weight: 560;
-		line-height: 0.9;
-		letter-spacing: 0.18em;
-		text-indent: 0.18em;
+		font-size: clamp(1.4rem, 2.6vw, 2.2rem);
+		font-weight: 540;
+		line-height: 0.95;
+		letter-spacing: 0.32em;
+		text-indent: 0.32em;
 		text-transform: uppercase;
-		text-shadow:
-			0 4px 44px rgba(138, 154, 140, 0.14),
-			0 30px 80px rgba(0, 0, 0, 0.32);
+		opacity: 0.55;
+		text-shadow: 0 2px 28px rgba(60, 62, 58, 0.08);
 	}
 	.hero p {
-		margin-top: 0.85rem;
+		margin-top: 0.55rem;
 		color: var(--text-soft);
-		font-size: clamp(0.85rem, 1.4vw, 1.05rem);
-		font-weight: 530;
+		font-size: clamp(0.78rem, 1.1vw, 0.9rem);
+		font-weight: 480;
 		letter-spacing: 0.08em;
+		opacity: 0.72;
 	}
 	.has-turns .hero {
 		opacity: 0;
