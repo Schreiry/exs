@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import VoidBackground from '$lib/components/VoidBackground.svelte';
 	import WindowChrome from '$lib/components/WindowChrome.svelte';
 	import ContextInput from '$lib/components/ContextInput.svelte';
@@ -57,7 +57,12 @@
 	function resetThinkingLanes() {
 		for (const t of laneTimers) clearTimeout(t);
 		laneTimers = [];
-		thinkingLanes = thinkingLanes.map((l) => ({ ...l, state: 'idle' }));
+		// Writes must be untracked so this doesn't create a write→effect→write
+		// loop with the $effect below (which would Svelte flag as
+		// effect_update_depth_exceeded).
+		untrack(() => {
+			thinkingLanes = thinkingLanes.map((l) => ({ ...l, state: 'idle' }));
+		});
 	}
 
 	function startThinkingLanes(query: string) {
@@ -75,30 +80,43 @@
 					baseLanes[3]
 				]
 			: baseLanes;
-		thinkingLanes = lanes.map((l) => ({ ...l, state: 'idle' }));
+		// Same untrack pattern: this state is driven by setTimeouts, not by
+		// any other effect, so it should not loop.
+		untrack(() => {
+			thinkingLanes = lanes.map((l) => ({ ...l, state: 'idle' }));
+		});
 		// Stagger the lane activations so the user sees four waves of activity.
 		const wave = 480;
 		for (let i = 0; i < lanes.length; i++) {
 			laneTimers.push(
 				setTimeout(() => {
-					thinkingLanes = thinkingLanes.map((l, idx) =>
-						idx === i ? { ...l, state: 'running' } : l
-					);
-					laneTimers.push(
-						setTimeout(() => {
-							thinkingLanes = thinkingLanes.map((l, idx) =>
-								idx === i ? { ...l, state: 'done' } : l
-							);
-						}, wave + 280)
-					);
+					untrack(() => {
+						thinkingLanes = thinkingLanes.map((l, idx) =>
+							idx === i ? { ...l, state: 'running' } : l
+						);
+						laneTimers.push(
+							setTimeout(() => {
+								untrack(() => {
+									thinkingLanes = thinkingLanes.map((l, idx) =>
+										idx === i ? { ...l, state: 'done' } : l
+									);
+								});
+							}, wave + 280)
+						);
+					});
 				}, i * wave)
 			);
 		}
 	}
 
 	$effect(() => {
-		if (scene.mode === 'searching' && scene.query) startThinkingLanes(scene.query);
-		else if (scene.mode !== 'searching') resetThinkingLanes();
+		// Read deps explicitly first so Svelte's tracker sees them.
+		const mode = scene.mode;
+		const query = scene.query;
+		untrack(() => {
+			if (mode === 'searching' && query) startThinkingLanes(query);
+			else if (mode !== 'searching') resetThinkingLanes();
+		});
 	});
 
 	// Apply the injection draft to the current scene query. Captures the
