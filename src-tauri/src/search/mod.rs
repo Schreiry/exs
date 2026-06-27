@@ -58,7 +58,9 @@ pub fn reindex_item_fts(conn: &Connection, item_id: &str) -> Result<(), String> 
 pub fn rebuild_search_index(conn: &Connection) -> Result<usize, String> {
     conn.execute("DELETE FROM item_search_fts", [])
         .map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare("SELECT id FROM items").map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id FROM items")
+        .map_err(|e| e.to_string())?;
     let ids: Vec<String> = stmt
         .query_map([], |r| r.get::<_, String>(0))
         .map_err(|e| e.to_string())?
@@ -113,7 +115,11 @@ fn build_fts_match(query: &str) -> Option<String> {
 
 /// Compute which source fields contain any of the query terms (best-effort,
 /// done in Rust after hydration so we can report `matched_by` precisely).
-fn matched_fields(item: &Item, meta: Option<&crate::events::types::AiItemMetadata>, terms: &[String]) -> Vec<String> {
+fn matched_fields(
+    item: &Item,
+    meta: Option<&crate::events::types::AiItemMetadata>,
+    terms: &[String],
+) -> Vec<String> {
     let mut out = Vec::new();
     let name = item.name.to_lowercase();
     let desc = item.description.to_lowercase();
@@ -280,7 +286,9 @@ pub fn search_products(
             )
             .map_err(|e| e.to_string())?;
         let ids = stmt
-            .query_map(rusqlite::params![like, cap as i64], |r| r.get::<_, String>(0))
+            .query_map(rusqlite::params![like, cap as i64], |r| {
+                r.get::<_, String>(0)
+            })
             .map_err(|e| e.to_string())?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
@@ -331,7 +339,15 @@ mod tests {
         conn
     }
 
-    fn add(conn: &Connection, id: &str, name: &str, desc: &str, cat: &str, aliases: &[&str], tags: &[&str]) {
+    fn add(
+        conn: &Connection,
+        id: &str,
+        name: &str,
+        desc: &str,
+        cat: &str,
+        aliases: &[&str],
+        tags: &[&str],
+    ) {
         conn.execute(
             "INSERT INTO events (aggregate_id, aggregate_type, event_type, data, hlc_timestamp, node_id, version)
              VALUES (?1, 'item', 'ItemCreated', ?2, '0:0:n', 'n', 1)",
@@ -358,19 +374,40 @@ mod tests {
     #[test]
     fn search_matches_alias_across_languages() {
         let conn = db();
-        add(&conn, "jeep", "სათამაშო ჯიპი", "red toy jeep", "სათამაშოები", &["ჯიპი", "машина", "jeep"], &["car", "red"]);
-        add(&conn, "tea", "მწვანე ჩაი", "green tea box", "სასმელები", &["ჩაი", "чай"], &["tea"]);
+        add(
+            &conn,
+            "jeep",
+            "სათამაშო ჯიპი",
+            "red toy jeep",
+            "სათამაშოები",
+            &["ჯიპი", "машина", "jeep"],
+            &["car", "red"],
+        );
+        add(
+            &conn,
+            "tea",
+            "მწვანე ჩაი",
+            "green tea box",
+            "სასმელები",
+            &["ჩაი", "чай"],
+            &["tea"],
+        );
 
         // Russian alias should find the Georgian-named jeep.
         let resp = search_products(&conn, "машина", None).unwrap();
         assert_eq!(resp.language, "ru");
-        assert!(resp.results.iter().any(|r| r.item_id == "jeep"), "alias search must hit jeep");
+        assert!(
+            resp.results.iter().any(|r| r.item_id == "jeep"),
+            "alias search must hit jeep"
+        );
 
         // English term.
         let resp2 = search_products(&conn, "jeep", None).unwrap();
         assert!(resp2.results.iter().any(|r| r.item_id == "jeep"));
-        assert!(resp2.results[0].matched_by.contains(&"aliases".to_string())
-            || resp2.results[0].matched_by.contains(&"name".to_string()));
+        assert!(
+            resp2.results[0].matched_by.contains(&"aliases".to_string())
+                || resp2.results[0].matched_by.contains(&"name".to_string())
+        );
     }
 
     #[test]

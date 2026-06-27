@@ -50,7 +50,11 @@ fn install_panic_hook() {
             std::backtrace::Backtrace::force_capture(),
         );
         if let Some(path) = panic_log_path() {
-            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+            {
                 use std::io::Write;
                 let _ = f.write_all(body.as_bytes());
             }
@@ -65,7 +69,12 @@ fn show_fatal_dialog(title: &str, body: &str) {
     let title_w: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     let body_w: Vec<u16> = body.encode_utf16().chain(std::iter::once(0)).collect();
     unsafe {
-        MessageBoxW(std::ptr::null_mut(), body_w.as_ptr(), title_w.as_ptr(), MB_OK | MB_ICONERROR);
+        MessageBoxW(
+            std::ptr::null_mut(),
+            body_w.as_ptr(),
+            title_w.as_ptr(),
+            MB_OK | MB_ICONERROR,
+        );
     }
 }
 #[cfg(not(windows))]

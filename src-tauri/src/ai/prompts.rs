@@ -7,10 +7,12 @@ use crate::ai::types::{AiRequest, ProductContext};
 /// System prompt for the conversational/answer flow.
 pub fn system_answer(language: &str) -> String {
     let lang_rules = match language {
-        "ka" => "\
+        "ka" => {
+            "\
  პასუხი მხოლოდ ქართულად. გამოიყენე ბუნებრივი, სწორი ქართული ბიზნეს-ლექსიკა. \
 არ თარგმნო პირდაპირ — გადმოეცი აზრი, ტონი და კონტექსტი. მოერიდე რუსიციზმებსა და \
-ხელოვნურ ბიუროკრატიულ სტილს. იყავი მოკლე და კონკრეტული.",
+ხელოვნურ ბიუროკრატიულ სტილს. იყავი მოკლე და კონკრეტული."
+        }
         "ru" => "Отвечай по-русски, деловым, но живым тоном. Кратко и по делу.",
         _ => "Reply in clear, natural English. Be concise and business-focused.",
     };
@@ -44,7 +46,11 @@ pub fn render_context(items: &[ProductContext]) -> String {
 
 /// Compose the full user message (context + query) for the answer flow.
 pub fn answer_user_message(req: &AiRequest) -> String {
-    format!("{}\n\nUser request: {}", render_context(&req.context_items), req.query)
+    format!(
+        "{}\n\nUser request: {}",
+        render_context(&req.context_items),
+        req.query
+    )
 }
 
 /// Instruction that forces strict JSON for product image analysis.
@@ -70,7 +76,6 @@ For Georgian, write meaning-based, natural text (not a literal translation).{hin
 }
 
 /// Instruction for the Georgian second-pass localization / self-review.
-#[allow(dead_code)]
 pub fn georgian_review_instruction(text: &str) -> String {
     format!(
         "Improve the following Georgian business text. Fix any grammar, syntax, style or \

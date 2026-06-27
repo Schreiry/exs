@@ -134,7 +134,11 @@ fn smart_split(sql: &str) -> Vec<String> {
     let mut i = 0;
     while i < bytes.len() {
         let c = bytes[i] as char;
-        let next = if i + 1 < bytes.len() { bytes[i + 1] as char } else { '\0' };
+        let next = if i + 1 < bytes.len() {
+            bytes[i + 1] as char
+        } else {
+            '\0'
+        };
 
         if in_line_comment {
             buf.push(c);
@@ -227,7 +231,11 @@ fn matches_keyword_at(bytes: &[u8], pos: usize, kw: &[u8]) -> bool {
         return false;
     }
     let slice = &bytes[pos..pos + kw.len()];
-    if !slice.iter().zip(kw.iter()).all(|(b, k)| b.to_ascii_uppercase() == *k) {
+    if !slice
+        .iter()
+        .zip(kw.iter())
+        .all(|(b, k)| b.to_ascii_uppercase() == *k)
+    {
         return false;
     }
     let before_ok = pos == 0 || {
@@ -276,10 +284,16 @@ pub fn run(conn: &Connection) -> Result<usize, Box<dyn std::error::Error>> {
             continue;
         }
 
-        log::info!("Applying migration {}: {}", migration.version, migration.name);
+        log::info!(
+            "Applying migration {}: {}",
+            migration.version,
+            migration.name
+        );
 
         let prior_fk: bool = if migration.needs_fk_off {
-            let prior: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap_or(0);
+            let prior: i64 = conn
+                .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
+                .unwrap_or(0);
             let _ = conn.execute_batch("PRAGMA foreign_keys = OFF;");
             prior != 0
         } else {
@@ -398,9 +412,11 @@ mod tests {
         .unwrap();
 
         let (name, price): (String, f64) = conn
-            .query_row("SELECT name, current_price FROM items WHERE id='i1'", [], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT name, current_price FROM items WHERE id='i1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .unwrap();
         assert_eq!(name, "ჩაი");
         assert_eq!(price, 12.5);

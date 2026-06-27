@@ -20,7 +20,11 @@ const MAX_CONTEXT_ITEMS: usize = 8;
 
 fn selected_provider(conn: &Connection) -> AiProviderKind {
     let s: Option<String> = conn
-        .query_row("SELECT value FROM local_config WHERE key = 'ai_provider'", [], |r| r.get(0))
+        .query_row(
+            "SELECT value FROM local_config WHERE key = 'ai_provider'",
+            [],
+            |r| r.get(0),
+        )
         .ok();
     AiProviderKind::from_str(s.as_deref().unwrap_or("mock"))
 }
@@ -115,13 +119,17 @@ pub async fn analyze_item_image(
         let conn = conn_arc.lock().map_err(|e| e.to_string())?;
         let item = crate::db::queries::get_item_by_id(&conn, &item_id)?
             .ok_or_else(|| "item not found".to_string())?;
-        let rel = item.image_path.ok_or_else(|| "item has no image".to_string())?;
+        let rel = item
+            .image_path
+            .ok_or_else(|| "item has no image".to_string())?;
         (rel, item.name, selected_provider(&conn))
     };
 
     let app_dir = handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let abs = app_dir.join(&image_rel);
-    let bytes = tokio::fs::read(&abs).await.map_err(|e| format!("read image: {e}"))?;
+    let bytes = tokio::fs::read(&abs)
+        .await
+        .map_err(|e| format!("read image: {e}"))?;
     let mime = sniff_mime(&bytes).to_string();
 
     use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -134,10 +142,23 @@ pub async fn analyze_item_image(
         .await
         .map_err(|e| e.to_string())?;
 
+    // Best-effort Georgian second-pass on the KA caption. Captures spec
+    // requirement #13 automatically without UI churn. If the provider fails
+    // (or no provider is configured), georgian_review returns the input as-is,
+    // so this never blocks the analyze flow.
+    let caption_ka = match (router.first(), meta.caption_ka.as_deref()) {
+        (Some(p), Some(text)) => ai::localization::georgian_review(p, text).await,
+        _ => meta.caption_ka.clone().unwrap_or_default(),
+    };
+
     let ai_meta = AiItemMetadata {
         item_id: item_id.clone(),
         image_caption_ru: meta.caption_ru,
-        image_caption_ka: meta.caption_ka,
+        image_caption_ka: if caption_ka.is_empty() {
+            None
+        } else {
+            Some(caption_ka)
+        },
         image_caption_en: meta.caption_en,
         tags: meta.tags,
         visual_attributes: meta.visual_attributes,
