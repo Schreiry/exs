@@ -8,7 +8,7 @@ use crate::events::types::*;
 use crate::search;
 use crate::sync::hlc::HybridLogicalClock;
 use serde_json::json;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
 #[tauri::command]
@@ -224,6 +224,33 @@ pub async fn save_item_image(
         json!({ "item_id": item_id, "path": relative_path }),
     );
     Ok(relative_path)
+}
+
+/// Load an item's image bytes for the frontend. Returns None when the item
+/// has no image attached. Used by the void interface to render a hero image
+/// above (and inside) product cards when search results match.
+#[tauri::command]
+pub fn get_item_image(
+    handle: AppHandle,
+    db: State<'_, Database>,
+    item_id: String,
+) -> Result<Option<ItemImage>, String> {
+    // Resolve the relative path from the DB (no file I/O under lock).
+    let rel: Option<String> = {
+        let conn = db.conn.lock().map_err(|e| e.to_string())?;
+        crate::db::queries::get_item_by_id(&conn, &item_id)?
+            .and_then(|i| i.image_path)
+    };
+    let Some(rel) = rel else { return Ok(None); };
+
+    let app_dir = handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let abs = app_dir.join(&rel);
+    let bytes = std::fs::read(&abs).map_err(|e| format!("read image: {e}"))?;
+    let mime = crate::files::sniff_mime(&bytes).to_string();
+
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    let base64 = STANDARD.encode(&bytes);
+    Ok(Some(ItemImage { mime, base64 }))
 }
 
 /// Inventory analytics summary (item count, stock value, low-stock, top categories).

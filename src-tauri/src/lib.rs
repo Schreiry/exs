@@ -154,6 +154,7 @@ pub fn run() {
             commands::inventory::adjust_stock,
             commands::inventory::change_price,
             commands::inventory::save_item_image,
+            commands::inventory::get_item_image,
             commands::inventory::delete_item,
             commands::inventory::delete_all_items,
             commands::inventory::duplicate_item,
