@@ -10,10 +10,12 @@
 	let {
 		result,
 		index = 0,
+		imageUrl: providedImageUrl = null,
 		onUploaded
 	}: {
 		result: ProductSearchResult;
 		index?: number;
+		imageUrl?: string | null;
 		onUploaded?: (itemId: string) => void;
 	} = $props();
 
@@ -23,20 +25,21 @@
 // Image: fetched from the asset protocol when an item has image_path.
 	// Asset URLs are scoped via Tauri's convertFileSrc (allowed by CSP), no
 	// need to round-trip the bytes through Rust.
-	let imageUrl = $state<string | null>(null);
+	let resolvedImageUrl = $state<string | null>(null);
+	const displayImageUrl = $derived(providedImageUrl ?? resolvedImageUrl);
 	$effect(() => {
 		const relative = item.image_path;
-		if (!relative || !isTauri()) {
-			imageUrl = null;
+		if (providedImageUrl || !relative || !isTauri()) {
+			resolvedImageUrl = null;
 			return;
 		}
 		let disposed = false;
 		appAssetUrl(relative)
 			.then((url) => {
-				if (!disposed) imageUrl = url;
+				if (!disposed) resolvedImageUrl = url;
 			})
 			.catch(() => {
-				if (!disposed) imageUrl = null;
+				if (!disposed) resolvedImageUrl = null;
 			});
 		return () => {
 			disposed = true;
@@ -133,7 +136,7 @@
 
 <article
 	class="card hint-{result.card_style_hint}"
-	class:has-image={imageUrl}
+	class:has-image={displayImageUrl}
 	style="--delay: {delay}ms; --tint: {item.card_color || 'transparent'}"
 >
 <!-- Image zone: shows current image, or a drop/paste hint when missing.
@@ -141,7 +144,7 @@
 	     attaches a clipboard image to this item. -->
 	<div
 		class="image-zone"
-		class:has-image={!!imageUrl}
+		class:has-image={!!displayImageUrl}
 		class:drag-over={dragOver}
 		class:uploading
 		role="button"
@@ -159,15 +162,15 @@
 			}
 		}}
 	>
-		{#if imageUrl}
-			<img src={imageUrl} alt={result.title} loading="lazy" decoding="async" />
+		{#if displayImageUrl}
+			<img src={displayImageUrl} alt={result.title} loading="lazy" decoding="async" />
 			<div class="media-shade"></div>
 			<div class="overlay">
 				<span class="overlay-label">{t('card.upload.replace')}</span>
 			</div>
 		{:else}
 			<div class="placeholder">
-				<span class="ph-icon" aria-hidden="true">⤴</span>
+				<span class="ph-icon" aria-hidden="true">@</span>
 				<span class="ph-text">{t('card.upload.hint')}</span>
 				<span class="ph-sub">{t('card.upload.hintSub')}</span>
 			</div>
@@ -245,10 +248,10 @@
 	}
 	.card:hover {
 		transform: translateY(-4px);
-		border-color: rgba(183, 246, 238, 0.3);
+		border-color: rgba(174, 184, 173, 0.32);
 		box-shadow:
 			0 32px 90px rgba(3, 10, 17, 0.4),
-			0 0 50px rgba(99, 224, 207, 0.07),
+			0 0 50px rgba(138, 154, 140, 0.08),
 			inset 0 1px 0 rgba(255, 255, 255, 0.17);
 	}
 	.card.has-image {
@@ -477,7 +480,7 @@
 	}
 	.hint-primary {
 		background:
-			linear-gradient(145deg, rgba(131, 234, 221, 0.15), transparent 48%),
+			linear-gradient(145deg, rgba(138, 154, 140, 0.16), transparent 48%),
 			var(--glass-bg);
 	}
 	.hint-visual {

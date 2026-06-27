@@ -1,70 +1,78 @@
-// ქართული ლოკალიზაცია (Georgian strings).
-// Ключи сгруппированы по смысловым неймспейсам — удобно расширять и переводить.
-// Тексты — смысловые, не дословный перевод; естественная бизнес-лексика.
-
 export const ka = {
 	app: {
 		title: 'Exsul',
-		tagline: 'თქვენი ბიზნესის AI-სივრცე'
+		tagline: 'ერთიანი სივრცე ბიზნესის ძიებისთვის, ანალიზისთვის და მოქმედებისთვის'
 	},
 	input: {
-		placeholder: 'დაწერეთ — მოძებნე, გააანალიზე, აჩვენე…',
-		hint: 'Enter — გასაგზავნად'
+		placeholder: 'წერე ნებისმიერ ადგილას',
+		hint: '/ მოქმედებები  @ ფაილები  # პროდუქტები  ! აზროვნება'
 	},
 	state: {
-		waking: 'სივრცე იღვიძებს…',
-		searching: 'ვეძებ…',
-		thinking: 'ვაანალიზებ…',
+		waking: 'სივრცე იღვიძებს...',
+		searching: 'ვეძებ...',
+		thinking: 'ვ ა ა ნ ა ლ ი ზ ე ბ...',
 		error: 'შეფერხება მოხდა'
 	},
 	results: {
 		found: '{count} შედეგი',
-		empty: 'ვერაფერი მოიძებნა',
-		emptyHint: 'სცადეთ სხვა სიტყვა ან ატვირთეთ ფოტო',
-		summary: 'რეზიუმე'
+		empty: 'შედეგი ვერ მოიძებნა',
+		emptyHint: 'სცადეთ სხვა აღწერა ან დაამატეთ ფოტო',
+		summary: 'შეჯამება'
 	},
 	card: {
 		price: 'ფასი',
 		stock: 'მარაგი',
-		sold: 'გაყიდული',
+		sold: 'გაყიდულია',
 		category: 'კატეგორია',
 		analyze: 'ფოტოს ანალიზი',
 		noImage: 'ფოტო არ არის',
 		confidence: 'სიზუსტე',
-		matchedBy: 'ემთხვევა',
+		matchedBy: 'დამთხვევა',
 		upload: {
 			hint: 'ჩასმა · ჩაგდება · არჩევა',
 			hintSub: 'Ctrl+V ან ფაილის გადმოთრევა',
 			replace: 'შეცვლა',
-			uploading: 'იტვირთება…',
-			notImage: 'მხოლოდ სურათის ფაილი',
-			tooBig: 'ფაილი ძალიან დიდია (≤ 5 მბ)',
+			uploading: 'იტვირთება...',
+			notImage: 'აირჩიეთ მხოლოდ სურათის ფაილი',
+			tooBig: 'ფაილი ძალიან დიდია (<= 5 მბ)',
 			aria: 'ფოტოს დამატება: {title}'
 		}
 	},
 	assistant: {
-		label: 'ასისტენტი',
-		errorFallback: 'AI დროებით მიუწვდომელია — შედეგები ნაჩვენებია ლოკალური ძიებიდან'
+		label: 'ცოცხალი კონტექსტი',
+		errorFallback:
+			'AI დროებით მიუწვდომელია. შედეგები ნაჩვენებია ადგილობრივი ძიებიდან.'
 	},
 	actions: {
-		title: 'ქმედებების სივრცე',
+		title: 'მოქმედებების სივრცე',
 		hint: 'მიმდინარე კონტექსტის ინსტრუმენტები',
-		empty: 'მოდულებს ქმედებები ჯერ არ დაუმატებიათ',
-		open: 'ქმედებები',
+		empty: 'მოდულებს მოქმედებები ჯერ არ დაუმატებიათ',
+		open: 'მოქმედებები',
 		focus: 'წერის დაწყება',
-		focusDescription: 'დაუბრუნდით ცენტრალურ ველს და განაგრძეთ აზრი',
+		focusDescription: 'დაუბრუნდით მთავარ კონტექსტს და გააგრძელეთ აზრი',
 		newContext: 'ახალი კონტექსტი',
-		newContextDescription: 'მიმდინარე სცენის ისტორიის გასუფთავება',
+		newContextDescription: 'გაასუფთავეთ მიმდინარე სცენის ისტორია',
 		attachFiles: 'ფაილების დამატება',
-		attachFilesDescription: 'აირჩიეთ დოკუმენტები შემდეგი AI-მოთხოვნისთვის',
+		attachFilesDescription: 'აირჩიეთ დოკუმენტები შემდეგი AI მოთხოვნისთვის',
 		clearFiles: 'ფაილების მოცილება',
-		clearFilesDescription: 'არჩეული დოკუმენტების მოცილება AI-კონტექსტიდან',
+		clearFilesDescription: 'მოაცილეთ არჩეული დოკუმენტები AI კონტექსტიდან',
 		refreshSearch: 'ძიების განახლება',
-		refreshSearchDescription: 'პროდუქტებისა და AI-მეტამონაცემების ლოკალური ინდექსის თავიდან აგება',
-		createBackup: 'სარეზერვო ასლის შექმნა',
-		createBackupDescription: 'ლოკალური ბაზისა და სურათების ერთ არქივში შენახვა',
+		refreshSearchDescription: 'თავიდან ააგეთ პროდუქტებისა და AI მეტამონაცემების ინდექსი',
+		createBackup: 'სარეზერვო ასლი',
+		createBackupDescription: 'შეინახეთ ადგილობრივი ბაზა და სურათები ერთ არქივში',
+		moduleIntro: '{name} მოდული ჩაერთო კონტექსტში',
+		moduleBusiness: 'ბიზნესის ანალიზი',
+		moduleBusinessDescription: 'მარჟა, მარაგი, ფასები და შემდეგი მოქმედება',
+		moduleGovernment: 'სახელმწიფო სერვისები',
+		moduleGovernmentDescription: 'ქართული საჯარო რეესტრები და პროცედურები',
+		moduleSocial: 'სოციალური არხები',
+		moduleSocialDescription: 'Instagram/Facebook კონტენტი ბიზნესის კონტექსტით',
+		moduleCompetitors: 'კონკურენტები',
+		moduleCompetitorsDescription: 'ფასების, შეთავაზებების და პოზიციონირების შედარება',
+		moduleStats: 'სტატისტიკა',
+		moduleStatsDescription: 'სექტორული მონაცემები და ბაზრის სიგნალები',
 		contextGroup: 'კონტექსტი',
-		aiContextGroup: 'AI-კონტექსტი',
+		aiContextGroup: 'AI კონტექსტი',
 		dataGroup: 'მონაცემები'
 	},
 	files: {
@@ -83,7 +91,7 @@ export const ka = {
 		openai: 'OpenAI',
 		gemini: 'Gemini',
 		claude: 'Claude',
-		mock: 'სადემო (გასაღების გარეშე)',
+		mock: 'სადემო რეჟიმი',
 		notConfigured: 'გასაღები არ არის'
 	},
 	units: {
