@@ -11,37 +11,38 @@
 @import '@fontsource-variable/jost';
 
 :root {
-	/* — Luminous graphite: dark enough for depth, warm enough to feel alive.
-	   Каждый шаг +6% яркости, +3% насыщенности к зелёному каналу. — */
-	--void-0: #161819; /* deep base */
-	--void-1: #1d1f20; /* surface dark */
-	--void-2: #262829; /* surface */
-	--void-3: #303233; /* surface light */
-	--void-silver: #8a8e8c; /* mid graphite */
+	/* — Luminous graphite: warm-neutral gray with depth. Lifted into the
+	   middle luminance range so the surface reads as a soft sky, not a cave.
+	   RGB-balanced +20%G / +10%B / +5%R per the project palette spec. — */
+	--void-0: #c8c9c5; /* deep gray (was near-black) */
+	--void-1: #d2d3cf; /* surface dark */
+	--void-2: #dadbd8; /* surface */
+	--void-3: #e3e4e1; /* surface light */
+	--void-silver: #9a9c98; /* mid graphite */
 
-	/* — Text (tinted toward warm-neutral, never pure white) — */
-	--text-strong: #ebe9e5;
-	--text: #cdcbc6;
-	--text-soft: #9a9893;
-	--text-faint: #6b6964;
+	/* — Text (dark enough to read on the lifted surface, never pure black) — */
+	--text-strong: #2a2c28;
+	--text: #4a4c47;
+	--text-soft: #6b6d68;
+	--text-faint: #8c8e88;
 
 	/* — Single accent: шалфей-графит. Используется только для активного
 	   состояния, фокуса, тонкой подсветки. Никаких других «brand» цветов. — */
-	--accent: #8a9a8c;
-	--accent-soft: rgba(138, 154, 140, 0.28);
-	--accent-bright: #aeb8ad;
-	--accent-glow: rgba(138, 154, 140, 0.22);
+	--accent: #6f7f70;
+	--accent-soft: rgba(111, 127, 112, 0.22);
+	--accent-bright: #5c6c5d;
+	--accent-glow: rgba(111, 127, 112, 0.18);
 
 	/* — Semantic (muted, never neon) — */
-	--danger: #b88a82;
-	--success: #8aa68a;
+	--danger: #a86860;
+	--success: #6f8a6f;
 
 	/* — Surfaces (glass within reason) — */
-	--glass-bg: rgba(38, 40, 41, 0.55);
-	--glass-border: rgba(220, 218, 213, 0.13);
+	--glass-bg: rgba(232, 233, 229, 0.62);
+	--glass-border: rgba(60, 62, 58, 0.10);
 	--glass-shadow:
-		0 24px 70px rgba(0, 0, 0, 0.42),
-		inset 0 1px 0 rgba(255, 255, 255, 0.11);
+		0 24px 70px rgba(40, 42, 38, 0.18),
+		inset 0 1px 0 rgba(255, 255, 255, 0.5);
 
 	/* — Type — */
 	--font-ui: 'Noto Sans Georgian', 'Jost Variable', system-ui, sans-serif;
@@ -60,7 +61,7 @@
 	--px: 0;
 	--py: 0;
 
-	color-scheme: dark;
+	color-scheme: light;
 }
 
 /* Reduced-motion / low-effect: respect OS preference. */

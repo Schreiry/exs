@@ -53,6 +53,19 @@ const MIGRATIONS: &[Migration] = &[
         sql: include_str!("../../migrations/1001_legacy_core_bridge.sql"),
         needs_fk_off: false,
     },
+    Migration {
+        // Demo-item morph: «მწვანე ჩაი» (demo-tea) → «ბიპლანი».
+        // Ставим ПОСЛЕ legacy_core_bridge (1001): на легаси-БД колонка
+        // description добавляется только bridge-ем, и UPDATE на старой
+        // форме items упал бы. demo-tea сохраняет id — это плюс: событийный
+        // лог легаси-юзера не плодит дубликатов; меняем только проекцию +
+        // ai_item_metadata + FTS. Свежие инсталлы получают «ბიპლანი»
+        // под id demo-biplane через seed.rs (demo-tea в items нет).
+        version: 1002,
+        name: "demo_tea_to_biplane",
+        sql: include_str!("../../migrations/005_demo_tea_to_biplane.sql"),
+        needs_fk_off: false,
+    },
 ];
 
 /// Apply a single migration. First pass: whole file in one transaction
@@ -485,6 +498,121 @@ mod tests {
             )
             .unwrap();
         assert_eq!(indexed, 1);
+    }
+
+    #[test]
+    fn migration_1002_morphs_existing_tea_into_biplane() {
+        // Simulate a user who already has demo-tea in the DB (old build).
+        // After migrations run, that row should be relabelled «ბიპლანი»
+        // with the full Georgian alias set, and FTS should pick it up by
+        // any of those aliases.
+        let conn = fresh_conn();
+        // Bootstrap core schema so the events/items/ai_item_metadata tables
+        // exist; we then inject an old-build demo-tea event before running
+        // the migration chain end-to-end (which is what the production
+        // `init_with_recovery` flow does).
+        run(&conn).expect("bootstrap migrations");
+        conn.execute(
+            "DELETE FROM items WHERE id='demo-tea';
+             DELETE FROM events WHERE aggregate_id='demo-tea';
+             DELETE FROM ai_item_metadata WHERE item_id='demo-tea';
+             DELETE FROM item_search_fts WHERE item_id='demo-tea';",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO events (aggregate_id, aggregate_type, event_type, data, hlc_timestamp, node_id, version)
+             VALUES ('demo-tea', 'item', 'ItemCreated',
+                     '{\"name\":\"მწვანე ჩაი\",\"description\":\"ბიო მწვანე ჩაი\",\"category\":\"სასმელები\",\"price\":18.5,\"initial_stock\":30}',
+                     '0:0:old', 'old', 1)",
+            [],
+        )
+        .unwrap();
+        // The ItemCreated trigger already projected the row. Wipe the
+        // bookkeeping for 1002 so the runner actually applies it (otherwise
+        // it would be skipped as already-applied), then call `run` again —
+        // the runner is idempotent for everything else.
+        conn.execute("DELETE FROM schema_migrations WHERE version = 1002;", [])
+            .unwrap();
+        let failures = run(&conn).expect("re-run must succeed");
+        assert_eq!(failures, 0, "no migration should fail");
+
+        let (name, description, category): (String, String, String) = conn
+            .query_row(
+                "SELECT name, description, category FROM items WHERE id='demo-tea'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(name, "ბიპლანი");
+        assert_eq!(category, "მოდელები");
+        assert!(description.contains("ბიპლანი"));
+
+        // Aliases must be present in ai_item_metadata.
+        let aliases_json: String = conn
+            .query_row(
+                "SELECT aliases_json FROM ai_item_metadata WHERE item_id='demo-tea'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let aliases: Vec<String> = serde_json::from_str(&aliases_json).unwrap();
+        for must in [
+            "ბიპლანი",
+            "თვითმფრენი",
+            "самолет",
+            "biplane",
+            "wooden model",
+        ] {
+            assert!(aliases.iter().any(|a| a == must), "missing alias `{must}`");
+        }
+
+        // FTS must find the row by Georgian and Russian aliases.
+        for term in ["თვითმფრენი", "самолет", "biplane", "винтаж"]
+        {
+            let n: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM item_search_fts WHERE item_search_fts MATCH ?1",
+                    [format!("\"{term}\"*")],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert!(
+                n >= 1,
+                "FTS should find demo-tea by `{term}` after migration 1002 (got {n})"
+            );
+        }
+    }
+
+    #[test]
+    fn migration_1002_is_safe_on_fresh_db_without_demo_tea() {
+        // On a brand-new install the seed runs AFTER migrations and creates
+        // «ბიპლანი» under id demo-biplane (not demo-tea). Migration 1002
+        // must not crash, must not create phantom rows.
+        let conn = fresh_conn();
+        let failures = run(&conn).expect("migrations must apply");
+        assert_eq!(failures, 0);
+
+        let n: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM items WHERE id='demo-tea'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(n, 0, "fresh DB should not have demo-tea");
+
+        let n_meta: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM ai_item_metadata WHERE item_id='demo-tea'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            n_meta, 0,
+            "fresh DB should not have ai metadata for demo-tea"
+        );
     }
 
     #[test]

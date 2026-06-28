@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ka">
+	<head>
+		<meta charset="utf-8" />
+		<title>Exsul — ტექნიკური დოკუმენტაცია</title>
+		<style>
+			@font-face {
+				font-family: 'Noto Georgian';
+				src: url('../node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-400-normal.woff2')
+					format('woff2');
+				font-weight: 400;
+				unicode-range: U+10A0-10FF, U+2D00-2D2F;
+			}
+			@font-face {
+				font-family: 'Noto Georgian';
+				src: url('../node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-latin-400-normal.woff2')
+					format('woff2');
+				font-weight: 400;
+				unicode-range: U+0000-024F;
+			}
+			@font-face {
+				font-family: 'Noto Georgian';
+				src: url('../node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-600-normal.woff2')
+					format('woff2');
+				font-weight: 600;
+				unicode-range: U+10A0-10FF, U+2D00-2D2F;
+			}
+			@font-face {
+				font-family: 'Noto Georgian';
+				src: url('../node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-latin-600-normal.woff2')
+					format('woff2');
+				font-weight: 600;
+				unicode-range: U+0000-024F;
+			}
+			@font-face {
+				font-family: 'Noto Georgian';
+				src: url('../node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-700-normal.woff2')
+					format('woff2');
+				font-weight: 700;
+				unicode-range: U+10A0-10FF, U+2D00-2D2F;
+			}
+			@font-face {
+				font-family: 'Noto Georgian';
+				src: url('../node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-latin-700-normal.woff2')
+					format('woff2');
+				font-weight: 700;
+				unicode-range: U+0000-024F;
+			}
+
+			:root {
+				--blue: #304284;
+				--blue-deep: #26366f;
+				--blue-soft: #dbe5f5;
+				--blue-pale: #edf2fa;
+				--ink: #202538;
+				--line: #596071;
+			}
+
+			@page {
+				size: A4;
+				margin: 15.5mm 17mm 13.5mm;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				background: white;
+			}
+
+			body {
+				color: var(--ink);
+				font-family: 'Noto Georgian', 'Segoe UI', sans-serif;
+				font-size: 8.35pt;
+				line-height: 1.27;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+
+			header {
+				margin: 0 0 5.5mm;
+				text-align: center;
+			}
+
+			h1 {
+				margin: 0 0 1.5mm;
+				color: var(--blue);
+				font-size: 16.8pt;
+				font-weight: 700;
+				line-height: 1.14;
+				letter-spacing: -0.018em;
+			}
+
+			.meta {
+				margin: 0;
+				color: #303447;
+				font-size: 9pt;
+				letter-spacing: 0.006em;
+			}
+
+			section {
+				margin: 0 0 4.1mm;
+				break-inside: avoid;
+			}
+
+			h2 {
+				margin: 0 0 1.6mm;
+				color: var(--blue);
+				font-size: 12.6pt;
+				font-weight: 700;
+				line-height: 1.15;
+			}
+
+			p {
+				margin: 0;
+				text-align: justify;
+			}
+
+			.pipeline {
+				margin-top: 1.5mm;
+				padding: 2.2mm 2.8mm;
+				border-left: 2.2mm solid var(--blue);
+				background: var(--blue-pale);
+				color: #202944;
+				font-size: 8.1pt;
+				line-height: 1.34;
+				text-align: left;
+			}
+
+			.principle {
+				margin-top: 1.2mm;
+				color: #33394c;
+				font-size: 7.9pt;
+			}
+
+			.stack-lead {
+				margin-bottom: 1.7mm;
+			}
+
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				table-layout: fixed;
+				font-size: 7.15pt;
+				line-height: 1.18;
+			}
+
+			col.layer {
+				width: 17%;
+			}
+
+			col.tech {
+				width: 31%;
+			}
+
+			col.reason {
+				width: 52%;
+			}
+
+			th,
+			td {
+				padding: 1.18mm 1.55mm;
+				border: 0.45pt solid var(--line);
+				vertical-align: top;
+				text-align: left;
+			}
+
+			th {
+				border-color: #202a5b;
+				background: var(--blue);
+				color: white;
+				font-weight: 700;
+			}
+
+			tbody tr:nth-child(odd) td {
+				background: var(--blue-soft);
+			}
+
+			tbody tr:nth-child(even) td {
+				background: #fbfcfe;
+			}
+
+			td:first-child {
+				font-weight: 700;
+			}
+
+			code {
+				font-family: 'Noto Georgian', 'Segoe UI', sans-serif;
+				font-size: 0.96em;
+				font-weight: 600;
+			}
+
+			.details {
+				margin-bottom: 0;
+			}
+
+			.details-intro {
+				margin-bottom: 1.2mm;
+				color: #3a4052;
+				font-size: 7.9pt;
+			}
+
+			ul {
+				margin: 0;
+				padding: 0 0 0 5.2mm;
+			}
+
+			li {
+				margin: 0 0 1mm;
+				padding-left: 0.8mm;
+				text-align: justify;
+			}
+
+			li:last-child {
+				margin-bottom: 0;
+			}
+
+			strong {
+				font-weight: 700;
+			}
+
+			footer {
+				margin-top: 3mm;
+				padding-top: 1.5mm;
+				border-top: 0.55pt solid #aab3c8;
+				color: #697085;
+				font-size: 6.7pt;
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>Exsul — AI ბიზნეს-ასისტენტი მეწარმეებისთვის</h1>
+			<p class="meta">საქართველოს ტექნიკური უნივერსიტეტი &nbsp;|&nbsp; ჰაკათონი 2026 &nbsp;|&nbsp; ტექნიკური დოკუმენტაცია</p>
+		</header>
+
+		<section>
+			<h2>1. მიმოხილვა</h2>
+			<p>
+				<strong>Exsul</strong> არის local-first დესკტოპ AI ასისტენტი მცირე და საშუალო
+				ბიზნესისთვის. მისი მთავარი ეკრანი ერთიანი სამუშაო კონტექსტია: მომხმარებელი
+				ეკრანის ნებისმიერ მდგომარეობაში იწყებს წერას, სისტემა ეძებს პროდუქტებს,
+				აანალიზებს ბიზნეს-მონაცემებს და პასუხთან ერთად უშუალოდ სცენაზე აჩენს ბარათებსა
+				და სურათებს. მონაცემები რჩება მოწყობილობაზე; AI პროვაიდერს ეგზავნება მხოლოდ
+				მოთხოვნისთვის შერჩეული, ზომით შეზღუდული კონტექსტი. გაფართოებადი
+				<strong>Action Island</strong> (Alt+C ან კურსორის სწრაფი მოძრაობა) AI, ბიზნესისა
+				და ანალიტიკის მოქმედებებს ერთ ტიპიზებულ რეესტრში აერთიანებს.
+			</p>
+		</section>
+
+		<section>
+			<h2>2. არქიტექტურა</h2>
+			<div class="pipeline">
+				კლავიატურა / Action Island / ფაილის არჩევა → Svelte Scene →
+				TypeScript + Zod → Tauri IPC → Rust სერვისები → SQLite + FTS5 /
+				შეზღუდული ფაილური კონტექსტი → AI Gateway → ერთიანი შედეგების სცენა
+			</div>
+			<p class="principle">
+				პრინციპი: UI არ ეხება SQLite-ს პირდაპირ; პროვაიდერის გასაღები არ ტოვებს Rust
+				backend-ს; AI-ის პასუხი ყოველთვის არასანდო მონაცემად ითვლება.
+			</p>
+		</section>
+
+		<section>
+			<h2>3. ტექნოლოგიური სტეკი</h2>
+			<p class="stack-lead">
+				არქიტექტურა გამიჯნულია სცენის, ბრძანებების, მონაცემებისა და პროვაიდერების
+				ფენებად. არჩევანის საფუძველია სწრაფი გაშვება, ოფლაინ-მუშაობა, მკაცრი
+				ტიპიზაცია, აღდგენა და პროვაიდერების ჩანაცვლებადობა.
+			</p>
+			<table aria-label="Exsul-ის ტექნოლოგიური სტეკი">
+				<colgroup>
+					<col class="layer" />
+					<col class="tech" />
+					<col class="reason" />
+				</colgroup>
+				<thead>
+					<tr>
+						<th>ფენა</th>
+						<th>ტექნოლოგია</th>
+						<th>რატომ ეს არჩევანი</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Desktop ბირთვი</td>
+						<td>Tauri 2, Rust 2021, Tokio</td>
+						<td>ნატიური ფანჯარა, უსაფრთხო async I/O და მცირე რესურსული კვალი</td>
+					</tr>
+					<tr>
+						<td>ინტერფეისი</td>
+						<td>Svelte 5, SvelteKit, TypeScript, Vite</td>
+						<td>რეაქტიული void-სცენა, სწრაფი განახლება და კომპაქტური frontend</td>
+					</tr>
+					<tr>
+						<td>მოქმედებები</td>
+						<td>Action Registry + Action Island</td>
+						<td>AI/Business/Analytics მოდულები ღილაკებს მთავარი კომპონენტის შეცვლის გარეშე ამატებენ</td>
+					</tr>
+					<tr>
+						<td>მონაცემები</td>
+						<td>SQLite, rusqlite, WAL, event ledger</td>
+						<td>ლოკალური ტრანზაქციები, პროექციები, მიგრაციები, აღდგენა და სარეზერვო ასლები</td>
+					</tr>
+					<tr>
+						<td>ძიება</td>
+						<td>FTS5 + AI metadata</td>
+						<td>სახელის, აღწერის, კატეგორიის, ტეგების, caption-ისა და მრავალენოვანი alias-ების ძიება</td>
+					</tr>
+					<tr>
+						<td>AI Gateway</td>
+						<td>OpenAI, Gemini, Claude, mock; reqwest</td>
+						<td>არჩეული primary, fallback-ები, timeout-ები და provider-specific კოდის იზოლაცია</td>
+					</tr>
+					<tr>
+						<td>ფაილები</td>
+						<td>Tauri Dialog, opaque ID, SHA-256</td>
+						<td>მხოლოდ მკაფიოდ არჩეული UTF-8 ფაილები; path-ი webview-ს არ გადაეცემა</td>
+					</tr>
+					<tr>
+						<td>კონტრაქტი</td>
+						<td>Serde, Zod, cargo test/clippy, svelte-check</td>
+						<td>runtime-ვალიდაცია, frontend/backend სქემების თანხვედრა და მკაცრი CI-შემოწმება</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section class="details">
+			<h2>4. დანართი: სისტემის მუშაობის დეტალები</h2>
+			<p class="details-intro">
+				ქვემოთ ჩამოთვლილია სისტემის ძირითადი გარანტიები და გაფართოების წესები.
+			</p>
+			<ul>
+				<li>
+					<strong>ინტერაქცია:</strong> პირველი დასაბეჭდი სიმბოლო ავტომატურად ააქტიურებს
+					ცენტრალურ ველს; Enter აგზავნის მოთხოვნას, დასრულებული პასუხი კი ზედა,
+					scroll-ით მართვად ისტორიაში გადადის. ჩვეულებრივი chat bubble-ები და
+					გვერდითი ნავიგაცია არ გამოიყენება.
+				</li>
+				<li>
+					<strong>მონაცემები და ძიება:</strong> FTS5 ლოკალურად აბრუნებს მაქსიმუმ 40
+					შედეგს; AI-ს მხოლოდ top-8 პროდუქტის მინიმალური კონტექსტი გადაეცემა.
+					მიგრაცია <code>1001</code> legacy-სქემას მონაცემების დაკარგვის გარეშე
+					აახლებს; დახურვისას იქმნება სარეზერვო ასლი.
+				</li>
+				<li>
+					<strong>Action Island:</strong> იხსნება Alt+C-ით ან კურსორის shake-ჟესტით;
+					აქვს scroll, focus trap, კლავიატურული მართვა და reduced-motion რეჟიმი.
+					ახალი მოდული საკუთარ მოქმედებას namespaced ID-ით <code>registerAction</code>-ში
+					არეგისტრირებს.
+				</li>
+				<li>
+					<strong>ფაილური კონტექსტი:</strong> native picker იღებს მაქსიმუმ 10
+					ტექსტურ/სტრუქტურირებულ ფაილს, თითოეულს — 2 MiB-მდე. AI-მოთხოვნაში ჯამური
+					კონტექსტი 96K სიმბოლოთი იზღუდება და prompt-injection-ისგან დაცვისთვის
+					არასანდო მონაცემად ინიშნება. PDF/DOCX ამ ეტაპზე არ იკითხება.
+				</li>
+				<li>
+					<strong>უსაფრთხოება და ხარისხი:</strong> გასაღებები ინახება OS keyring-ში ან
+					environment-ში; provider API მხოლოდ Rust-იდან იძახება. AI-ს არ აქვს სრული
+					ბაზის, SQL-ის ან shell-ის წვდომა. მძიმე ოპერაციები async-ია, ქართული ტექსტი
+					კი მნიშვნელობაზე დაფუძნებულ დამატებით გადამოწმებას გადის.
+				</li>
+			</ul>
+		</section>
+
+		<footer>Exsul · local-first AI business assistant · Core 0.1.0 · 2026</footer>
+	</body>
+</html>

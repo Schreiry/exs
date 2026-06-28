@@ -76,7 +76,7 @@
 				const oy = py * magnitude;
 				ctx.beginPath();
 				ctx.arc(p.x * w + ox, p.y * h + oy, baseR + p.r * baseR, 0, Math.PI * 2);
-				ctx.fillStyle = `rgba(220, 218, 213, ${p.a * alpha})`;
+				ctx.fillStyle = `rgba(60, 64, 60, ${p.a * alpha * 1.4})`;
 				ctx.fill();
 			}
 		};
@@ -166,15 +166,15 @@
 		will-change: transform;
 	}
 	.aurora-a {
-		background: radial-gradient(50% 46% at 22% 18%, rgba(138, 154, 140, 0.34), transparent 70%);
+		background: radial-gradient(50% 46% at 22% 18%, rgba(140, 158, 142, 0.55), transparent 70%);
 		animation: drift-a 32s var(--ease-soft) infinite alternate;
 	}
 	.aurora-b {
-		background: radial-gradient(46% 44% at 78% 64%, rgba(166, 158, 144, 0.22), transparent 72%);
+		background: radial-gradient(46% 44% at 78% 64%, rgba(176, 168, 152, 0.38), transparent 72%);
 		animation: drift-b 41s var(--ease-soft) infinite alternate;
 	}
 	.aurora-c {
-		background: radial-gradient(60% 50% at 50% 100%, rgba(58, 64, 60, 0.4), transparent 80%);
+		background: radial-gradient(60% 50% at 50% 100%, rgba(120, 126, 120, 0.42), transparent 80%);
 	}
 	@keyframes drift-a {
 		from {
@@ -213,8 +213,8 @@
 		inset: 0;
 		pointer-events: none;
 		background:
-			radial-gradient(78% 74% at 50% 46%, transparent 56%, rgba(0, 0, 0, 0.42) 100%),
-			linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 12%, transparent 78%, rgba(0, 0, 0, 0.22));
+			radial-gradient(82% 78% at 50% 46%, transparent 60%, rgba(60, 62, 58, 0.14) 100%),
+			linear-gradient(180deg, rgba(120, 126, 120, 0.10), transparent 14%, transparent 78%, rgba(80, 86, 80, 0.12));
 	}
 
 	/* Subtle film grain. Catches light, sells the depth. ~3% opacity. */
@@ -223,7 +223,7 @@
 		inset: 0;
 		pointer-events: none;
 		opacity: 0.035;
-		mix-blend-mode: overlay;
+		mix-blend-mode: multiply;
 		background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 	}
 	@media (prefers-reduced-motion: reduce) {
